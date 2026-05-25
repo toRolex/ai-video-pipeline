@@ -83,7 +83,7 @@ export default function PipelineSidebar({
           className="w-full text-left px-2 py-1.5 text-xs text-gray-500 hover:bg-gray-100 rounded-md transition-colors"
           onClick={onViewLogs}
         >
-          {"\U0001F4CB"} 查看日志
+          {"\uD83D\uDCCB"} 查看日志
         </button>
       </div>
     </div>

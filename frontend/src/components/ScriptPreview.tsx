@@ -64,7 +64,7 @@ export default function ScriptPreview({
           className="bg-white border border-[#393f46] px-4 py-2 rounded-md text-xs hover:bg-gray-50 transition-all"
           onClick={onRegenerate}
         >
-          {"\U0001F504"} 重生成脚本
+          {"\uD83D\uDD04"} 重生成脚本
         </button>
       </div>
     </div>
