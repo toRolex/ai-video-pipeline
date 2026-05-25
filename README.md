@@ -13,15 +13,25 @@ cp .env.example .env
 
 # 3. 安装前端依赖
 cd frontend && npm install && cd ..
-
-# 4. 启动后端（端口 17890）
-uv run python -m apps.control_plane
-
-# 5. 启动前端开发服务器（端口 5173，自动代理到后端）
-cd frontend && npm run dev
 ```
 
-打开 **http://localhost:5173** 即可使用。
+### 启动
+
+| 服务 | 命令 | 端口 |
+|------|------|------|
+| 后端 | `uv run python -m apps.control_plane` | `17890` |
+| 前端 | `cd frontend && npm run dev` | `5173` |
+
+启动后打开 **http://localhost:5173**。
+
+### 关闭
+
+| 服务 | 方式 |
+|------|------|
+| 后端 | 在运行终端按 `Ctrl+C` |
+| 前端 | 在运行终端按 `Ctrl+C` |
+| 后端（强制） | `kill $(pgrep -f control_plane)` |
+| 前端（强制） | `kill $(pgrep -f vite)` |
 
 ## 技术栈
 
