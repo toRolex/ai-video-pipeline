@@ -7,6 +7,9 @@ interface Props {
   onStepClick: (key: string) => void;
   activeStepKey: string;
   jobInfo?: string;
+  onPause?: () => void;
+  onRetry?: () => void;
+  onViewLogs?: () => void;
 }
 
 export default function PipelineSidebar({
@@ -15,6 +18,9 @@ export default function PipelineSidebar({
   onStepClick,
   activeStepKey,
   jobInfo,
+  onPause,
+  onRetry,
+  onViewLogs,
 }: Props) {
   const currentIdx = PIPELINE_STEPS.findIndex((s) => s.phase === currentPhase);
 
@@ -61,13 +67,22 @@ export default function PipelineSidebar({
         );
       })}
       <div className="mt-4 pt-3 border-t border-gray-200">
-        <button className="w-full text-left px-2 py-1.5 text-xs text-gray-500 hover:bg-gray-100 rounded-md mb-1 transition-colors">
+        <button
+          className="w-full text-left px-2 py-1.5 text-xs text-gray-500 hover:bg-gray-100 rounded-md mb-1 transition-colors"
+          onClick={onPause}
+        >
           {"\u23F8"} 暂停
         </button>
-        <button className="w-full text-left px-2 py-1.5 text-xs text-gray-500 hover:bg-gray-100 rounded-md mb-1 transition-colors">
+        <button
+          className="w-full text-left px-2 py-1.5 text-xs text-gray-500 hover:bg-gray-100 rounded-md mb-1 transition-colors"
+          onClick={onRetry}
+        >
           {"\u21BB"} 重试当前
         </button>
-        <button className="w-full text-left px-2 py-1.5 text-xs text-gray-500 hover:bg-gray-100 rounded-md transition-colors">
+        <button
+          className="w-full text-left px-2 py-1.5 text-xs text-gray-500 hover:bg-gray-100 rounded-md transition-colors"
+          onClick={onViewLogs}
+        >
           {"\U0001F4CB"} 查看日志
         </button>
       </div>

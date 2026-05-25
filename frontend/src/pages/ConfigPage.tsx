@@ -13,14 +13,15 @@ export default function ConfigPage() {
   const [config, setConfig] = useState<ProviderConfig | null>(null);
   const [options, setOptions] = useState<ProviderOptions | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
+  const [saveMsg, setSaveMsg] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
       const [c, o] = await Promise.all([api.getConfig(), api.getConfigOptions()]);
       setConfig(c);
       setOptions(o);
-    } catch {
-      /* silently fail */
+    } catch (e) {
+      setSaveMsg("加载配置失败，请重试");
     }
   }, []);
 
@@ -45,10 +46,12 @@ export default function ConfigPage() {
   const handleSectionSave = async (section: string) => {
     if (!config) return;
     setSaving(section);
+    setSaveMsg(null);
     try {
       await api.saveConfig(config);
-    } catch {
-      /* silently fail */
+      setSaveMsg(`${SECTIONS.find((s) => s.key === section)?.label} 配置已保存`);
+    } catch (e) {
+      setSaveMsg(`保存失败：${e instanceof Error ? e.message : "未知错误"}`);
     }
     setSaving(null);
   };
@@ -60,6 +63,13 @@ export default function ConfigPage() {
   return (
     <div>
       <h1 className="text-xl font-bold mb-6">系统配置</h1>
+      {saveMsg && (
+        <div className={`mb-4 px-4 py-3 rounded-lg text-sm ${
+          saveMsg.includes("失败") ? "bg-red-50 border border-red-200 text-red-700" : "bg-green-50 border border-green-200 text-green-700"
+        }`}>
+          {saveMsg}
+        </div>
+      )}
       {SECTIONS.map(({ key, label }) => {
         const sectionData = config.providers[key];
         const sectionOpts = options.providers[key];
@@ -128,8 +138,8 @@ export default function ConfigPage() {
               )}
 
             <button
-              className={`mt-3 text-white px-4 py-2 rounded-lg text-sm transition-colors ${
-                saving === key ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"
+              className={`mt-3 text-white px-4 py-2 rounded-md text-xs transition-colors ${
+                saving === key ? "bg-gray-400" : "bg-[#0969da] hover:brightness-110"
               }`}
               disabled={saving === key}
               onClick={() => handleSectionSave(key)}

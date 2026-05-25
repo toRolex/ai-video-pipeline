@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import type { JobDetail } from "../types";
+import { PIPELINE_STEPS } from "../types";
 import PipelineSidebar from "../components/PipelineSidebar";
 import ScriptPreview from "../components/ScriptPreview";
 import MediaPlayer from "../components/MediaPlayer";
@@ -16,13 +17,18 @@ export default function JobPipeline() {
   const [error, setError] = useState("");
   const initialLoad = useRef(true);
 
+  const phaseToStepKey = (phase: string): string => {
+    const step = PIPELINE_STEPS.find((s) => s.phase === phase);
+    return step ? step.key : "";
+  };
+
   const load = useCallback(async () => {
     if (!id) return;
     try {
       const j = await api.getJob(id);
       setJob(j);
       if (initialLoad.current) {
-        setActiveStepKey(j.phase);
+        setActiveStepKey(phaseToStepKey(j.phase));
         initialLoad.current = false;
       }
       setError("");
@@ -80,26 +86,34 @@ export default function JobPipeline() {
     api.retryJob(job.job_id);
   };
 
+  const findArtifact = (kind: string) => {
+    return job.artifacts?.find((a) => a.kind === kind);
+  };
+
   const renderDetail = () => {
     switch (activeStepKey) {
-      case "asset_upload":
+      case "asset_upload": {
+        const asset = findArtifact("source_video");
         return (
           <div>
             <h3 className="font-semibold text-sm mb-3">上传素材</h3>
-            <MediaPlayer src="" kind="video" />
+            <MediaPlayer src={asset?.url || ""} kind="video" />
           </div>
         );
+      }
       case "script_gen":
-      case "script_review":
+      case "script_review": {
+        const scriptArtifact = findArtifact("script");
         return (
           <ScriptPreview
-            script="等待生成..."
+            script={scriptArtifact?.relative_path || "等待生成..."}
             checks={null}
             onApprove={() => handleApprove("script")}
             onReject={() => handleReject("script")}
             onRegenerate={handleRetry}
           />
         );
+      }
       case "packaging":
         return (
           <div>
@@ -107,24 +121,28 @@ export default function JobPipeline() {
             <p className="text-gray-400 text-sm">包装内容（标题、简介、标签）将在脚本审核通过后自动生成</p>
           </div>
         );
-      case "tts":
+      case "tts": {
+        const audio = findArtifact("tts_audio");
         return (
           <div>
             <h3 className="font-semibold text-sm mb-3">TTS 配音</h3>
-            <MediaPlayer src="" kind="audio" />
+            <MediaPlayer src={audio?.url || ""} kind="audio" />
           </div>
         );
+      }
       case "subtitle":
         return (
           <SubtitleEditor text="" onSave={(text) => console.log("save subtitle", text)} />
         );
-      case "video_base":
+      case "video_base": {
+        const video = findArtifact("video_base");
         return (
           <div>
             <h3 className="font-semibold text-sm mb-3">底包拼接</h3>
-            <MediaPlayer src="" kind="video" />
+            <MediaPlayer src={video?.url || ""} kind="video" />
           </div>
         );
+      }
       case "asset_review":
         return (
           <div>
@@ -132,13 +150,13 @@ export default function JobPipeline() {
             <p className="text-gray-400 text-sm mb-4">请确认选用的素材片段是否合适</p>
             <div className="flex gap-2">
               <button
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm"
+                className="bg-[#0969da] text-white border-none px-4 py-2 rounded-md text-xs hover:brightness-110 transition-all"
                 onClick={() => handleApprove("asset")}
               >
                 {"\u2713"} 通过
               </button>
               <button
-                className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm"
+                className="bg-[#d1242f] text-white border-none px-4 py-2 rounded-md text-xs hover:brightness-110 transition-all"
                 onClick={() => handleReject("asset")}
               >
                 {"\u2717"} 打回
@@ -146,20 +164,21 @@ export default function JobPipeline() {
             </div>
           </div>
         );
-      case "final_review":
+      case "final_review": {
+        const finalVideo = findArtifact("final_video");
         return (
           <div>
             <h3 className="font-semibold text-sm mb-3">最终视频</h3>
-            <MediaPlayer src="" kind="video" />
+            <MediaPlayer src={finalVideo?.url || ""} kind="video" />
             <div className="flex gap-2 mt-4">
               <button
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm"
+                className="bg-[#0969da] text-white border-none px-4 py-2 rounded-md text-xs hover:brightness-110 transition-all"
                 onClick={() => handleApprove("final")}
               >
                 {"\u2713"} 通过
               </button>
               <button
-                className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm"
+                className="bg-[#d1242f] text-white border-none px-4 py-2 rounded-md text-xs hover:brightness-110 transition-all"
                 onClick={() => handleReject("final")}
               >
                 {"\u2717"} 打回
@@ -167,12 +186,13 @@ export default function JobPipeline() {
             </div>
           </div>
         );
+      }
       case "schedule":
         return (
           <div>
             <h3 className="font-semibold text-sm mb-3">排期发布</h3>
             <p className="text-gray-400 text-sm mb-4">各平台发布信息将在视频审核通过后生成</p>
-            <button className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm">
+            <button className="bg-[#0969da] text-white px-4 py-2 rounded-md text-xs hover:brightness-110 transition-all">
               确认发布
             </button>
           </div>
@@ -214,6 +234,16 @@ export default function JobPipeline() {
           onStepClick={(key) => setActiveStepKey(key)}
           activeStepKey={activeStepKey}
           jobInfo={job.product ? `${job.job_id} ${job.product}` : job.job_id}
+          onPause={() => api.pauseJob(job.job_id)}
+          onRetry={handleRetry}
+          onViewLogs={async () => {
+            try {
+              const r = await api.getJobLogs(job.job_id);
+              alert(r.logs || "无日志");
+            } catch {
+              alert("无法加载日志");
+            }
+          }}
         />
         <div className="flex-1 p-5 bg-[#eff2f5]">{renderDetail()}</div>
       </div>

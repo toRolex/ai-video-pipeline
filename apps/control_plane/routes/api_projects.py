@@ -66,7 +66,7 @@ async def upload_asset(request: Request, project_id: str, file: UploadFile):
     if not file.filename:
         raise HTTPException(status_code=400, detail="filename required")
     repo = FileStoreRepository(request.app.state.root_dir)
-    assets_dir = repo.create_project(project_id) / "runtime" / "source_assets"
+    assets_dir = repo.create_project(project_id, name=project_id) / "runtime" / "source_assets"
     assets_dir.mkdir(parents=True, exist_ok=True)
     safe_name = _sanitize_filename(file.filename)
     dest = assets_dir / safe_name

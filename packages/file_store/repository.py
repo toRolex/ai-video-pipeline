@@ -63,6 +63,7 @@ class FileStoreRepository:
                     record = JobRecord.model_validate_json(f.read_text(encoding="utf-8"))
                     results.append({
                         "job_id": record.job_id,
+                        "product": record.product,
                         "phase": record.phase,
                         "review_status": record.review_status,
                     })

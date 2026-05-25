@@ -29,7 +29,7 @@ pythonpath = ["."]
 testpaths = ["tests"]
 
 [[tool.uv.index]]
-url = "http://mirrors.aliyun.com/pypi/simple/"
+url = "https://mirrors.aliyun.com/pypi/simple/"
 
 [[tool.uv.index]]
 url = "https://pypi.tuna.tsinghua.edu.cn/simple"
