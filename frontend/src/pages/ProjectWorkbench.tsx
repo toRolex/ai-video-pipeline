@@ -26,6 +26,7 @@ export default function ProjectWorkbench() {
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [tab, setTab] = useState<"jobs" | "schedule">("jobs");
   const [projectName, setProjectName] = useState("");
+  const [error, setError] = useState("");
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -37,11 +38,17 @@ export default function ProjectWorkbench() {
       setJobs((proj as { jobs?: JobSummary[] }).jobs || []);
       setAssets(assetList);
       setProjectName((proj as { name?: string }).name || id);
-    } catch { /* silently fail */ }
+      setError("");
+    } catch (e) {
+      console.error("load project failed", e);
+      setError("加载项目数据失败");
+    }
     try {
       const sched = await api.getSchedule({ project_id: id });
       setSchedule(sched);
-    } catch { /* silently fail */ }
+    } catch (e) {
+      console.error("load schedule failed", e);
+    }
   }, [id]);
 
   useEffect(() => { load(); }, [load]);
@@ -52,7 +59,10 @@ export default function ProjectWorkbench() {
     try {
       await api.uploadAsset(id, file);
       load();
-    } catch { /* silently fail */ }
+    } catch (e) {
+      console.error("upload failed", e);
+      setError("上传失败");
+    }
     setSelectedFile(null);
   };
 
@@ -61,7 +71,10 @@ export default function ProjectWorkbench() {
     try {
       const job = await api.createJob(id, { product, platforms });
       navigate(`/jobs/${job.job_id}`);
-    } catch { /* silently fail */ }
+    } catch (e) {
+      console.error("create job failed", e);
+      setError("创建 Job 失败");
+    }
   };
 
   const handleRetry = async (jobId: string) => {
@@ -90,6 +103,13 @@ export default function ProjectWorkbench() {
         <span className="text-gray-300">|</span>
         <h1 className="text-lg font-bold">{projectName || id}</h1>
       </div>
+
+      {error && (
+        <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm flex items-center justify-between">
+          <span>{error}</span>
+          <button onClick={() => setError("")} className="text-red-400 hover:text-red-600 text-lg leading-none">&times;</button>
+        </div>
+      )}
 
       {/* Create Job */}
       <section className="border rounded-xl p-5 mb-6 bg-white">

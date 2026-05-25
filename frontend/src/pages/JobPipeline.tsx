@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import type { JobDetail } from "../types";
@@ -13,20 +13,25 @@ export default function JobPipeline() {
   const [job, setJob] = useState<JobDetail | null>(null);
   const [activeStepKey, setActiveStepKey] = useState("");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const initialLoad = useRef(true);
 
   const load = useCallback(async () => {
     if (!id) return;
     try {
       const j = await api.getJob(id);
       setJob(j);
-      if (!activeStepKey) {
+      if (initialLoad.current) {
         setActiveStepKey(j.phase);
+        initialLoad.current = false;
       }
-    } catch {
-      /* silently fail */
+      setError("");
+    } catch (e) {
+      console.error("getJob failed", e);
+      setError("加载 Job 失败");
     }
     setLoading(false);
-  }, [id, activeStepKey]);
+  }, [id]);
 
   useEffect(() => {
     load();
@@ -43,15 +48,32 @@ export default function JobPipeline() {
   }
 
   if (!job) {
-    return <div className="text-center py-12 text-gray-400">Job 未找到</div>;
+    return (
+      <div className="text-center py-12">
+        <p className="text-gray-400 text-sm mb-2">Job 未找到</p>
+        {error && <p className="text-red-500 text-xs">{error}</p>}
+      </div>
+    );
   }
 
-  const handleApprove = (gate: string) => {
-    api.approveReview(job.job_id, gate);
+  const handleApprove = async (gate: string) => {
+    try {
+      await api.approveReview(job.job_id, gate);
+      load();
+    } catch (e) {
+      console.error("approve failed", e);
+      setError("审核操作失败");
+    }
   };
 
-  const handleReject = (gate: string) => {
-    api.rejectReview(job.job_id, gate);
+  const handleReject = async (gate: string) => {
+    try {
+      await api.rejectReview(job.job_id, gate);
+      load();
+    } catch (e) {
+      console.error("reject failed", e);
+      setError("审核操作失败");
+    }
   };
 
   const handleRetry = () => {
@@ -177,6 +199,13 @@ export default function JobPipeline() {
           </span>
         )}
       </div>
+
+      {error && (
+        <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm flex items-center justify-between">
+          <span>{error}</span>
+          <button onClick={() => setError("")} className="text-red-400 hover:text-red-600 text-lg leading-none">&times;</button>
+        </div>
+      )}
 
       <div className="flex border rounded-xl overflow-hidden min-h-[500px]">
         <PipelineSidebar
