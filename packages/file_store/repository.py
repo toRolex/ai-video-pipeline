@@ -66,6 +66,7 @@ class FileStoreRepository:
                         "product": record.product,
                         "phase": record.phase,
                         "review_status": record.review_status,
+                        "artifacts": [a.model_dump() for a in record.artifacts],
                     })
                 except Exception:
                     results.append({"job_id": f.stem, "phase": "unknown", "review_status": "unknown"})
