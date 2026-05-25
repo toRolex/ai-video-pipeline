@@ -86,8 +86,9 @@ def retry_job(request: Request, job_id: str):
                     break
                 except Exception:
                     continue
-    if project_id:
-        dispatcher.enqueue_demo_job(project_id, job_id)
+    if not project_id:
+        raise HTTPException(status_code=404, detail="job not found")
+    dispatcher.enqueue_demo_job(project_id, job_id)
     return {"status": "queued_for_retry", "job_id": job_id}
 
 

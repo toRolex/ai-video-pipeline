@@ -25,8 +25,10 @@ class FileStoreRepository:
             "logs",
         ):
             (root / relative).mkdir(parents=True, exist_ok=True)
-        meta = {"id": project_id, "name": name}
-        self._write_json(root / "project_meta.json", meta)
+        meta_path = root / "project_meta.json"
+        if not meta_path.exists():
+            meta = {"id": project_id, "name": name}
+            self._write_json(meta_path, meta)
         return root
 
     def load_project_meta(self, project_id: str) -> dict[str, Any]:
