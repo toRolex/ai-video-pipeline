@@ -1,6 +1,7 @@
 import { Routes, Route, Link } from "react-router-dom";
 import ProjectList from "./pages/ProjectList";
 import ProjectWorkbench from "./pages/ProjectWorkbench";
+import JobPipeline from "./pages/JobPipeline";
 import ConfigPage from "./pages/ConfigPage";
 
 export default function App() {
@@ -17,7 +18,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<ProjectList />} />
         <Route path="/projects/:id" element={<ProjectWorkbench />} />
-        <Route path="/jobs/:id" element={<div className="text-gray-500">流水线详情（施工中）</div>} />
+        <Route path="/jobs/:id" element={<JobPipeline />} />
         <Route path="/config" element={<ConfigPage />} />
       </Routes>
     </div>
