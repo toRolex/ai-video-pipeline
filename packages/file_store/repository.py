@@ -46,6 +46,13 @@ class FileStoreRepository:
         path = project_root(self.root, project_id) / "control" / "jobs" / f"{job_id}.json"
         return JobRecord.model_validate_json(path.read_text(encoding="utf-8"))
 
+    def delete_job(self, project_id: str, job_id: str) -> bool:
+        path = project_root(self.root, project_id) / "control" / "jobs" / f"{job_id}.json"
+        if not path.exists():
+            return False
+        path.unlink()
+        return True
+
     def append_review_event(self, project_id: str, event: dict[str, Any]) -> None:
         path = project_root(self.root, project_id) / "reviews" / "review_events.jsonl"
         path.parent.mkdir(parents=True, exist_ok=True)
