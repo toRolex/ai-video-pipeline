@@ -22,6 +22,12 @@ from packages.domain_core.state import next_phase
 REVIEW_PHASES = {"script_review", "asset_review", "final_review"}
 AUTO_TICK_INTERVAL = 3  # seconds between auto-advances in dev mode
 
+
+def _to_url_path(path: Path) -> str:
+    """Convert a workspace-relative Path to a URL-safe forward-slash path."""
+    return path.as_posix()
+
+
 # Stub artifact content per phase
 STUB_SCRIPT = "羊肚菌，大自然的黑色珍宝。滋元堂精选优质羊肚菌，每一朵都源自深山纯净环境，富含多种氨基酸和微量元素。烹饪时请务必充分烹熟，保留鲜美口感的同时确保食用安全。煲汤、清炒皆宜，轻松为家人补充满满营养。选择滋元堂羊肚菌，让健康从舌尖开始。"
 STUB_TITLE = "深山羊肚菌 滋补全家 | 滋元堂"
@@ -38,34 +44,37 @@ def _phase_to_artifacts(phase: str, job_id: str, project_dir: Path, root_dir: Pa
     if phase == "script_generating":
         script_path = artifacts_dir / "script.txt"
         script_path.write_text(STUB_SCRIPT, encoding="utf-8")
-        rel = str(script_path.relative_to(workspace_dir))
+        rel = _to_url_path(script_path.relative_to(workspace_dir))
         result.append({"kind": "script", "relative_path": rel, "url": f"/workspace/{rel}", "size_bytes": len(STUB_SCRIPT.encode())})
 
     elif phase == "tts_generating":
         audio_path = artifacts_dir / "tts.mp3"
         audio_path.write_bytes(b"stub-audio")
-        rel = str(audio_path.relative_to(workspace_dir))
+        rel = _to_url_path(audio_path.relative_to(workspace_dir))
         result.append({"kind": "tts_audio", "relative_path": rel, "url": f"/workspace/{rel}", "size_bytes": 10})
 
     elif phase == "subtitle_generating":
         srt_path = artifacts_dir / "subtitle.srt"
         srt_path.write_text("1\n00:00:00,000 --> 00:00:05,000\n羊肚菌，大自然的黑色珍宝。\n", encoding="utf-8")
-        rel = str(srt_path.relative_to(workspace_dir))
+        rel = _to_url_path(srt_path.relative_to(workspace_dir))
         result.append({"kind": "subtitle", "relative_path": rel, "url": f"/workspace/{rel}", "size_bytes": 60})
 
     elif phase == "asset_retrieving":
-        pass  # assets already uploaded by user
+        video_path = artifacts_dir / "source.mp4"
+        video_path.write_bytes(b"stub-source-video")
+        rel = _to_url_path(video_path.relative_to(workspace_dir))
+        result.append({"kind": "source_video", "relative_path": rel, "url": f"/workspace/{rel}", "size_bytes": 17})
 
     elif phase == "video_rendering":
         video_path = artifacts_dir / "base.mp4"
         video_path.write_bytes(b"stub-base-video")
-        rel = str(video_path.relative_to(workspace_dir))
+        rel = _to_url_path(video_path.relative_to(workspace_dir))
         result.append({"kind": "video_base", "relative_path": rel, "url": f"/workspace/{rel}", "size_bytes": 15})
 
     elif phase == "final_review":
         final_path = artifacts_dir / "final.mp4"
         final_path.write_bytes(b"stub-final-video")
-        rel = str(final_path.relative_to(workspace_dir))
+        rel = _to_url_path(final_path.relative_to(workspace_dir))
         result.append({"kind": "final_video", "relative_path": rel, "url": f"/workspace/{rel}", "size_bytes": 20})
 
     elif phase == "schedule_writing":

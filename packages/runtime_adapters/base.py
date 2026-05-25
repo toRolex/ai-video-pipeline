@@ -12,6 +12,10 @@ class BaseRuntimeAdapter(ABC):
         """Verify the local runtime is ready."""
 
     @abstractmethod
+    def ffmpeg_path(self) -> Path:
+        """Return the resolved path to the ffmpeg binary."""
+
+    @abstractmethod
     def attempt_root(self, workspace_root: Path, attempt_id: str) -> Path:
         """Create or return the workspace for one attempt."""
 

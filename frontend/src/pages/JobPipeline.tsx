@@ -1,12 +1,23 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
-import type { JobDetail } from "../types";
+import type { JobDetail, Phase } from "../types";
 import { PIPELINE_STEPS } from "../types";
 import PipelineSidebar from "../components/PipelineSidebar";
 import ScriptPreview from "../components/ScriptPreview";
 import MediaPlayer from "../components/MediaPlayer";
 import SubtitleEditor from "../components/SubtitleEditor";
+
+function computeCompletedPhases(currentPhase: Phase): Phase[] {
+  const terminalPhases: Phase[] = ["completed", "failed", "cancelled", "paused"];
+  const order = PIPELINE_STEPS.map((s) => s.phase);
+  if (terminalPhases.includes(currentPhase)) {
+    return order as Phase[];
+  }
+  const idx = order.indexOf(currentPhase);
+  if (idx <= 0) return [];
+  return order.slice(0, idx).filter((p, i, arr) => arr.indexOf(p) === i) as Phase[];
+}
 
 export default function JobPipeline() {
   const { id } = useParams<{ id: string }>();
@@ -18,7 +29,7 @@ export default function JobPipeline() {
   const [scriptContent, setScriptContent] = useState("");
   const initialLoad = useRef(true);
 
-  const phaseToStepKey = (phase: string): string => {
+  const phaseToStepKey = (phase: Phase): string => {
     const step = PIPELINE_STEPS.find((s) => s.phase === phase);
     return step ? step.key : "";
   };
@@ -209,6 +220,47 @@ export default function JobPipeline() {
             </button>
           </div>
         );
+      case "completed": {
+        const finalVideo = findArtifact("final_video");
+        return (
+          <div className="text-center py-12">
+            <div className="text-[#1a7f37] text-5xl mb-4">{"✓"}</div>
+            <h3 className="text-lg font-semibold text-[#1a7f37] mb-2">生产完成</h3>
+            <p className="text-gray-400 text-sm mb-4">视频已生成并排期发布</p>
+            <MediaPlayer src={finalVideo?.url || ""} kind="video" />
+          </div>
+        );
+      }
+      case "failed":
+        return (
+          <div className="text-center py-12">
+            <div className="text-[#cf222e] text-5xl mb-4">{"✗"}</div>
+            <h3 className="text-lg font-semibold text-[#cf222e] mb-2">任务失败</h3>
+            <p className="text-gray-400 text-sm">{job.last_error || "未知错误"}</p>
+            <button
+              className="mt-4 bg-[#0969da] text-white px-4 py-2 rounded-md text-xs hover:brightness-110 transition-all"
+              onClick={handleRetry}
+            >
+              {"↻"} 重试
+            </button>
+          </div>
+        );
+      case "cancelled":
+        return (
+          <div className="text-center py-12">
+            <div className="text-gray-400 text-5xl mb-4">{"⊘"}</div>
+            <h3 className="text-lg font-semibold text-gray-400 mb-2">已取消</h3>
+            <p className="text-gray-400 text-sm">该任务已被人工取消</p>
+          </div>
+        );
+      case "paused":
+        return (
+          <div className="text-center py-12">
+            <div className="text-[#9a6700] text-5xl mb-4">{"⏸"}</div>
+            <h3 className="text-lg font-semibold text-[#9a6700] mb-2">已暂停</h3>
+            <p className="text-gray-400 text-sm">任务已暂停，可点击"重试当前"继续</p>
+          </div>
+        );
       default:
         return <div className="text-gray-400 text-sm">未知步骤</div>;
     }
@@ -242,7 +294,7 @@ export default function JobPipeline() {
       <div className="flex border rounded-xl overflow-hidden min-h-[500px]">
         <PipelineSidebar
           currentPhase={job.phase}
-          completedPhases={[]}
+          completedPhases={computeCompletedPhases(job.phase)}
           onStepClick={(key) => setActiveStepKey(key)}
           activeStepKey={activeStepKey}
           jobInfo={job.product ? `${job.job_id} ${job.product}` : job.job_id}
