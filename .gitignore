@@ -14,6 +14,7 @@ reports/
 tools/bin/
 tools/models/
 tools/downloads/
+.worktrees/
 workspace/
 worker_workspace/
 __pycache__/
