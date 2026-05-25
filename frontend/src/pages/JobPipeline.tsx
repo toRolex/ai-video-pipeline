@@ -10,10 +10,11 @@ import SubtitleEditor from "../components/SubtitleEditor";
 
 function computeCompletedPhases(currentPhase: Phase): Phase[] {
   const terminalPhases: Phase[] = ["completed", "failed", "cancelled", "paused"];
-  const order = PIPELINE_STEPS.map((s) => s.phase);
+  const nonTerminalSteps = PIPELINE_STEPS.filter((s) => !terminalPhases.includes(s.phase));
   if (terminalPhases.includes(currentPhase)) {
-    return order as Phase[];
+    return [...nonTerminalSteps.map((s) => s.phase), currentPhase];
   }
+  const order = PIPELINE_STEPS.map((s) => s.phase);
   const idx = order.indexOf(currentPhase);
   if (idx <= 0) return [];
   return order.slice(0, idx).filter((p, i, arr) => arr.indexOf(p) === i) as Phase[];
