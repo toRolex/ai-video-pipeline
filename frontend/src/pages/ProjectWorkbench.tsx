@@ -88,6 +88,12 @@ export default function ProjectWorkbench() {
     load();
   };
 
+  const handleDeleteJob = async (jobId: string) => {
+    if (!window.confirm(`确认删除 Job ${jobId}？此操作不可撤销。`)) return;
+    await api.deleteJob(jobId);
+    load();
+  };
+
   const togglePlatform = (p: string) => {
     setPlatforms((prev) =>
       prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]
@@ -183,7 +189,7 @@ export default function ProjectWorkbench() {
 
       {tab === "jobs" ? (
         <>
-          <JobTable jobs={jobs} onRetry={handleRetry} />
+          <JobTable jobs={jobs} onRetry={handleRetry} onDelete={handleDeleteJob} />
           <section className="mt-6">
             <h2 className="font-semibold mb-3">素材库</h2>
             <div className="flex gap-3 overflow-x-auto pb-2">

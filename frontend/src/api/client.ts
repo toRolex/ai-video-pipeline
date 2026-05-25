@@ -65,6 +65,9 @@ export const api = {
   retryJob: (jobId: string) =>
     request<{ status: string }>(`/api/jobs/${jobId}/retry`, { method: "POST" }),
 
+  deleteJob: (jobId: string) =>
+    request<{ status: string; job_id: string }>(`/api/jobs/${jobId}`, { method: "DELETE" }),
+
   getJobLogs: (jobId: string) =>
     request<{ logs: string }>(`/api/jobs/${jobId}/logs`),
 

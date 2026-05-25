@@ -5,9 +5,10 @@ import StatusBadge from "./StatusBadge";
 interface Props {
   jobs: JobSummary[];
   onRetry: (jobId: string) => void;
+  onDelete: (jobId: string) => void;
 }
 
-export default function JobTable({ jobs, onRetry }: Props) {
+export default function JobTable({ jobs, onRetry, onDelete }: Props) {
   const navigate = useNavigate();
 
   if (jobs.length === 0) {
@@ -36,7 +37,7 @@ export default function JobTable({ jobs, onRetry }: Props) {
             <td className="py-2.5 px-2 text-[#59636e]">
               {j.phase_index > 0 ? `${j.phase_index}/${j.phase_total}` : "\u2014"}
             </td>
-            <td className="py-2.5 px-2">
+            <td className="py-2.5 px-2 flex gap-2 items-center">
               {j.phase === "failed" ? (
                 <button
                   className="text-[#0969da] hover:underline text-xs"
@@ -52,6 +53,12 @@ export default function JobTable({ jobs, onRetry }: Props) {
                   查看 &rarr;
                 </button>
               )}
+              <button
+                className="text-[#cf222e] hover:underline text-xs"
+                onClick={() => onDelete(j.job_id)}
+              >
+                删除
+              </button>
             </td>
           </tr>
         ))}
