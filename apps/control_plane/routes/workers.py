@@ -59,7 +59,6 @@ def report_task(task_id: str, payload: WorkerReport, request: Request) -> dict[s
     accepted = outcome == "accept"
 
     if accepted and payload.status == "succeeded":
-        # Advance job phase based on report outcome
         attempt_info = current  # type: ignore[assignment]
         project_id = attempt_info.get("project_id", "")
         job_id = payload.job_id
@@ -70,7 +69,6 @@ def report_task(task_id: str, payload: WorkerReport, request: Request) -> dict[s
                 record = repo.load_job(project_id, job_id)
                 current_phase = record.phase
 
-                # Build artifacts from report
                 artifacts = list(record.artifacts)
                 manifest = payload.artifact_manifest
                 if manifest and "files" in manifest:
@@ -82,14 +80,12 @@ def report_task(task_id: str, payload: WorkerReport, request: Request) -> dict[s
                             size_bytes=f.get("size_bytes", 0),
                         ))
 
-                # Advance to next phase
                 if current_phase not in REVIEW_PHASES:
                     try:
                         next_p = next_phase(current_phase)
                     except ValueError:
                         next_p = "completed"
 
-                    # If next phase is a review gate, stop there and set pending
                     if next_p in REVIEW_PHASES:
                         record = record.model_copy(update={
                             "phase": next_p,
@@ -102,7 +98,6 @@ def report_task(task_id: str, payload: WorkerReport, request: Request) -> dict[s
                             "artifacts": artifacts,
                         })
                 else:
-                    # Already at a review phase — shouldn't happen via worker
                     record = record.model_copy(update={"artifacts": artifacts})
 
                 repo.save_job(project_id, record)
@@ -113,6 +108,6 @@ def report_task(task_id: str, payload: WorkerReport, request: Request) -> dict[s
                     "to_phase": record.phase,
                 })
             except Exception:
-                pass  # Don't fail the report if state update fails
+                pass
 
     return {"accepted": accepted, "outcome": outcome, "task_id": task_id}
