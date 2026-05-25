@@ -217,5 +217,6 @@ export default function JobPipeline() {
         />
         <div className="flex-1 p-5 bg-[#eff2f5]">{renderDetail()}</div>
       </div>
+    </div>
   );
 }
