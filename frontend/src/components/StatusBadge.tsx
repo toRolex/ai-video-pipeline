@@ -2,19 +2,19 @@ import type { Phase } from "../types";
 
 const colorMap: Record<string, string> = {
   queued: "bg-gray-100 text-gray-700",
-  script_generating: "bg-blue-100 text-blue-700",
-  tts_generating: "bg-blue-100 text-blue-700",
-  subtitle_generating: "bg-blue-100 text-blue-700",
-  asset_retrieving: "bg-blue-100 text-blue-700",
-  video_rendering: "bg-blue-100 text-blue-700",
-  schedule_writing: "bg-blue-100 text-blue-700",
-  script_review: "bg-yellow-100 text-yellow-700",
-  asset_review: "bg-yellow-100 text-yellow-700",
-  final_review: "bg-yellow-100 text-yellow-700",
-  completed: "bg-green-100 text-green-700",
-  failed: "bg-red-100 text-red-700",
+  script_generating: "bg-[#e3f2fd] text-[#0969da]",
+  tts_generating: "bg-[#e3f2fd] text-[#0969da]",
+  subtitle_generating: "bg-[#e3f2fd] text-[#0969da]",
+  asset_retrieving: "bg-[#e3f2fd] text-[#0969da]",
+  video_rendering: "bg-[#e3f2fd] text-[#0969da]",
+  schedule_writing: "bg-[#e3f2fd] text-[#0969da]",
+  script_review: "bg-[#fff3cd] text-[#997404]",
+  asset_review: "bg-[#fff3cd] text-[#997404]",
+  final_review: "bg-[#fff3cd] text-[#997404]",
+  completed: "bg-[#e6f4ea] text-[#1a7f37]",
+  failed: "bg-[#ffe0e0] text-[#d1242f]",
   cancelled: "bg-gray-200 text-gray-500",
-  paused: "bg-orange-100 text-orange-700",
+  paused: "bg-[#fff3e0] text-[#e65100]",
 };
 
 const labelMap: Record<string, string> = {

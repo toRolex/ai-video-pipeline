@@ -13,8 +13,8 @@ function NavLink({ to, label }: { to: string; label: string }) {
       to={to}
       className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
         active
-          ? "text-blue-600 bg-blue-50"
-          : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+          ? "text-[#0969da] bg-[#eff2f5]"
+          : "text-[#59636e] hover:text-gray-700 hover:bg-gray-50"
       }`}
     >
       {label}

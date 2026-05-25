@@ -40,7 +40,7 @@ export default function ProjectList() {
             onKeyDown={(e) => e.key === "Enter" && create()}
           />
           <button
-            className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
+            className="bg-[#d1242f] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:brightness-110 transition-all"
             onClick={create}
           >
             创建项目
@@ -50,14 +50,14 @@ export default function ProjectList() {
 
       {projects.length === 0 ? (
         <div className="text-center py-16 text-gray-400">
-          <div className="text-4xl mb-4">📂</div>
+          <div className="text-5xl mb-4">📂</div>
           <p>暂无项目，创建一个开始吧</p>
         </div>
       ) : (
         <div className="border rounded-xl overflow-hidden">
           <table className="w-full border-collapse text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b text-left text-gray-500">
+              <tr className="bg-gray-50 border-b border-[#393f46] text-left text-[#59636e]">
                 <th className="py-3 px-4 font-medium">项目名称</th>
                 <th className="py-3 px-4 font-medium">状态</th>
                 <th className="py-3 px-4 font-medium">Jobs</th>
