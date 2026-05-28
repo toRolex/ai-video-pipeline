@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -12,7 +13,7 @@ class FileStoreRepository:
     def __init__(self, root: Path) -> None:
         self.root = root
 
-    def create_project(self, project_id: str) -> Path:
+    def create_project(self, project_id: str, name: str = "") -> Path:
         root = project_root(self.root, project_id)
         for relative in (
             "control/jobs",
@@ -25,7 +26,17 @@ class FileStoreRepository:
             "logs",
         ):
             (root / relative).mkdir(parents=True, exist_ok=True)
+        meta_path = root / "project_meta.json"
+        if not meta_path.exists():
+            meta = {"id": project_id, "name": name}
+            self._write_json(meta_path, meta)
         return root
+
+    def load_project_meta(self, project_id: str) -> dict[str, Any]:
+        path = project_root(self.root, project_id) / "project_meta.json"
+        if not path.exists():
+            return {"id": project_id, "name": project_id}
+        return json.loads(path.read_text(encoding="utf-8"))
 
     def save_job(self, project_id: str, record: JobRecord) -> None:
         path = project_root(self.root, project_id) / "control" / "jobs" / f"{record.job_id}.json"
@@ -36,11 +47,62 @@ class FileStoreRepository:
         path = project_root(self.root, project_id) / "control" / "jobs" / f"{job_id}.json"
         return JobRecord.model_validate_json(path.read_text(encoding="utf-8"))
 
+    def delete_job(self, project_id: str, job_id: str) -> bool:
+        path = project_root(self.root, project_id) / "control" / "jobs" / f"{job_id}.json"
+        if not path.exists():
+            return False
+        path.unlink()
+        runtime_dir = project_root(self.root, project_id) / "runtime" / "jobs" / job_id
+        if runtime_dir.exists():
+            shutil.rmtree(runtime_dir)
+        return True
+
     def append_review_event(self, project_id: str, event: dict[str, Any]) -> None:
         path = project_root(self.root, project_id) / "reviews" / "review_events.jsonl"
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(event, ensure_ascii=False) + "\n")
+
+    def list_jobs(self, project_id: str) -> list[dict[str, Any]]:
+        jobs_root = project_root(self.root, project_id) / "control" / "jobs"
+        if not jobs_root.exists():
+            return []
+        results: list[dict[str, Any]] = []
+        for f in sorted(jobs_root.iterdir()):
+            if f.is_file() and f.suffix == ".json":
+                try:
+                    record = JobRecord.model_validate_json(f.read_text(encoding="utf-8"))
+                    results.append({
+                        "job_id": record.job_id,
+                        "product": record.product,
+                        "phase": record.phase,
+                        "review_status": record.review_status,
+                        "artifacts": [a.model_dump() for a in record.artifacts],
+                    })
+                except Exception:
+                    results.append({"job_id": f.stem, "phase": "unknown", "review_status": "unknown"})
+        return results
+
+    def list_assets(self, project_id: str) -> list[dict[str, Any]]:
+        assets_root = project_root(self.root, project_id) / "runtime" / "source_assets"
+        if not assets_root.exists():
+            return []
+        results: list[dict[str, Any]] = []
+        for f in sorted(assets_root.iterdir()):
+            if f.is_file():
+                results.append({
+                    "name": f.name,
+                    "size_bytes": f.stat().st_size,
+                    "in_use": False,
+                })
+        return results
+
+    def delete_asset(self, project_id: str, asset_name: str) -> bool:
+        asset_path = project_root(self.root, project_id) / "runtime" / "source_assets" / asset_name
+        if not asset_path.exists():
+            return False
+        asset_path.unlink()
+        return True
 
     def _write_json(self, path: Path, payload: dict[str, Any]) -> None:
         temp_path = path.with_suffix(path.suffix + ".tmp")

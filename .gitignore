@@ -14,6 +14,8 @@ reports/
 tools/bin/
 tools/models/
 tools/downloads/
+.worktrees/
+schedule.db*
 workspace/
 worker_workspace/
 __pycache__/
@@ -25,3 +27,8 @@ __pycache__/
 *.pyc
 *.pyo
 .DS_Store
+.playwright-cli/
+frontend/dist/
+frontend/node_modules/
+frontend/package-lock.json
+.gstack/
