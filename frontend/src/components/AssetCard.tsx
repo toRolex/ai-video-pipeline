@@ -35,6 +35,9 @@ export default function AssetCard({ asset, onDelete, selected = false, onSelect 
       role={isSelectable ? "button" : undefined}
       tabIndex={isSelectable ? 0 : undefined}
       onKeyDown={isSelectable ? (e) => {
+        if (e.target !== e.currentTarget) {
+          return;
+        }
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           onSelect?.(asset.name);
