@@ -26,11 +26,20 @@ export default function AssetCard({ asset, onDelete, selected = false, onSelect 
       ? "border-[#1a7f37] bg-[#e6f4ea]"
       : "border-[#d0d7de] bg-white";
 
+  const isSelectable = Boolean(onSelect);
+
   return (
-    <button
-      type="button"
+    <div
       className={`w-44 text-left border rounded-lg overflow-hidden flex-shrink-0 transition-colors ${containerClass}`}
-      onClick={() => onSelect?.(asset.name)}
+      onClick={isSelectable ? () => onSelect?.(asset.name) : undefined}
+      role={isSelectable ? "button" : undefined}
+      tabIndex={isSelectable ? 0 : undefined}
+      onKeyDown={isSelectable ? (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect?.(asset.name);
+        }
+      } : undefined}
     >
       <div className="h-[90px] bg-[#eff2f5] flex items-center justify-center text-[28px]">
         {"🎬"}
@@ -57,6 +66,6 @@ export default function AssetCard({ asset, onDelete, selected = false, onSelect 
           删除
         </button>
       </div>
-    </button>
+    </div>
   );
 }
