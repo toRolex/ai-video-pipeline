@@ -45,13 +45,28 @@ export const api = {
     request<import("../types").AssetFile[]>(`/api/projects/${projectId}/assets`),
 
   // Asset Library
-  listIndexedAssets: (projectId: string, params?: { category?: string; q?: string }) => {
+  listIndexedAssets: async (projectId: string, params?: { category?: string; q?: string }) => {
     const qs = new URLSearchParams();
     if (params?.category) qs.set("category", params.category);
     if (params?.q) qs.set("q", params.q);
-    return request<{ clips: import("../types").AssetRecord[]; stats: import("../types").AssetStats }>(
-      `/api/projects/${projectId}/assets/indexed?${qs.toString()}`
-    );
+    const res = await request<{
+      assets: import("../types").AssetRecord[];
+      stats: {
+        total_clips: number;
+        available_clips: number;
+        disabled_clips: number;
+        source_videos: number;
+      };
+    }>(`/api/projects/${projectId}/assets/indexed?${qs.toString()}`);
+    return {
+      assets: res.assets,
+      stats: {
+        total: res.stats.total_clips,
+        available: res.stats.available_clips,
+        disabled: res.stats.disabled_clips,
+        source_videos: res.stats.source_videos,
+      },
+    };
   },
 
   indexAssets: (projectId: string) =>
