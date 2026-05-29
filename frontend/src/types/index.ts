@@ -51,7 +51,7 @@ export interface AssetRecord {
   product: string;
   confidence: number;
   duration_seconds: number;
-  status: "pending_review" | "available" | "disabled";
+  status: "available" | "disabled";
   usage_count: number;
   source_video: string;
   tags: string[];
@@ -68,9 +68,9 @@ export interface IndexResult {
 }
 
 export interface AssetStats {
-  total_clips: number;
-  available_clips: number;
-  disabled_clips: number;
+  total: number;
+  available: number;
+  disabled: number;
   source_videos: number;
 }
 
