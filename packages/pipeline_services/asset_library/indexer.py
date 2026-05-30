@@ -66,7 +66,10 @@ class AssetIndexer:
                 target_dir = output_base / self.product / target_category.value
                 target_dir.mkdir(parents=True, exist_ok=True)
 
-                dest_path = target_dir / clip_path.name
+                prefix = video_path.stem
+                dest_path = target_dir / f"{prefix}_{clip_path.name}"
+                if dest_path.exists():
+                    dest_path = target_dir / f"{prefix}_{uuid.uuid4().hex[:6]}_{clip_path.name}"
                 shutil.move(str(clip_path), str(dest_path))
 
                 duration = self._get_duration(dest_path)

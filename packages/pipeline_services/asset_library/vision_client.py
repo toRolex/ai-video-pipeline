@@ -64,7 +64,13 @@ class VisionClient:
         return payload, headers
 
     def _parse_openai_response(self, data: dict) -> dict:
-        raw_text = data["choices"][0]["message"]["content"]
+        raw = data["choices"][0]["message"]["content"]
+        if isinstance(raw, list):
+            raw_text = "".join(
+                part.get("text", "") for part in raw if isinstance(part, dict)
+            )
+        else:
+            raw_text = str(raw)
         try:
             result = json.loads(raw_text)
             return {"category": result.get("category", ""), "confidence": float(result.get("confidence", 0.5))}
@@ -100,7 +106,7 @@ class VisionClient:
         return payload, headers
 
     def _parse_claude_response(self, data: dict) -> dict:
-        raw_text = data["content"][0]["text"]
+        raw_text = str(data["content"][0]["text"])
         try:
             result = json.loads(raw_text)
             return {"category": result.get("category", ""), "confidence": float(result.get("confidence", 0.5))}

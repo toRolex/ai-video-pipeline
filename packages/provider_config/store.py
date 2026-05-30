@@ -97,7 +97,7 @@ def _merge_payload(payload: Any, previous: dict | None = None) -> dict:
                     continue
                 if field_name in secret_fields:
                     if value == CLEAR_SECRET_SENTINEL:
-                        merged_sections[section_name]["providers"][provider_name][field_name] = ""
+                        merged_sections[section_name]["providers"][provider_name][field_name] = CLEAR_SECRET_SENTINEL
                         continue
                     if value in {"", SECRET_MASK}:
                         previous_value = previous_provider.get(field_name)
@@ -170,18 +170,24 @@ def _sync_secrets_to_env(root_dir: Path, payload: dict) -> dict:
         existing_lines = env_path.read_text(encoding="utf-8").splitlines()
 
     secret_updates: dict[str, str] = {}
+    secrets_to_clear: set[str] = set()
     providers = payload.get("providers", {})
     for section_name, section in providers.items():
         for provider_name, provider in section.get("providers", {}).items():
             for field_name, value in provider.items():
-                if not isinstance(value, str) or not value or value in (SECRET_MASK, CLEAR_SECRET_SENTINEL):
+                if value == CLEAR_SECRET_SENTINEL:
+                    env_key = _SECRET_ENV_MAP.get((section_name, provider_name, field_name))
+                    if env_key:
+                        secrets_to_clear.add(env_key)
+                    continue
+                if not isinstance(value, str) or not value or value == SECRET_MASK:
                     continue
                 env_key = _SECRET_ENV_MAP.get((section_name, provider_name, field_name))
                 if env_key is None:
                     continue
                 secret_updates[env_key] = value
 
-    if not secret_updates:
+    if not secret_updates and not secrets_to_clear:
         return payload
 
     # Write updated .env
@@ -193,6 +199,9 @@ def _sync_secrets_to_env(root_dir: Path, payload: dict) -> dict:
             new_lines.append(line)
             continue
         key = stripped.split("=", 1)[0].strip()
+        if key in secrets_to_clear:
+            seen.add(key)
+            continue
         if key in secret_updates:
             new_lines.append(f"{key}={secret_updates[key]}")
             seen.add(key)

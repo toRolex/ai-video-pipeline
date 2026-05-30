@@ -113,7 +113,6 @@ def _phase_to_artifacts(phase: str, job_id: str, project_dir: Path, root_dir: Pa
             repo = AssetRepository(db_path)
             retriever = AssetRetriever(repo)
 
-            product = os.environ.get("PRODUCT", "见手青")
             selected = retriever.retrieve(script_text, product)
 
             clip_list_path = job_dir / "selected_clips.json"
@@ -124,6 +123,14 @@ def _phase_to_artifacts(phase: str, job_id: str, project_dir: Path, root_dir: Pa
                 "relative_path": _to_url_path(clip_list_path, workspace_dir),
                 "url": f"/workspace/{_to_url_path(clip_list_path, workspace_dir)}",
                 "size_bytes": clip_list_path.stat().st_size,
+            })
+        else:
+            # No script text found — emit sentinel so auto_tick can advance
+            result.append({
+                "kind": "asset_retrieval_done",
+                "relative_path": "",
+                "url": "",
+                "size_bytes": 0,
             })
 
     elif phase == "video_rendering":
@@ -141,7 +148,7 @@ def _phase_to_artifacts(phase: str, job_id: str, project_dir: Path, root_dir: Pa
                 concat_list = job_dir / "concat_list.txt"
                 write_concat_file(concat_list, clip_paths)
                 audio_duration = get_media_duration(audio_path)
-                recipe_idx = hash(job_id) % 4
+                recipe_idx = int(job_id[-4:], 16) % 4
                 recipes = [
                     {"name": "小红书", "vf": "eq=brightness=0.02:contrast=1.03:saturation=1.05"},
                     {"name": "抖音", "vf": "unsharp=5:5:0.8:3:3:0.4,eq=contrast=0.98"},

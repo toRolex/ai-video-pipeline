@@ -11,7 +11,8 @@ def write_concat_file(list_path: Path, clips: list[Path]) -> None:
     list_path.parent.mkdir(parents=True, exist_ok=True)
     with list_path.open("w", encoding="utf-8") as handle:
         for clip in clips:
-            handle.write(f"file '{str(clip).replace(chr(92), '/')}'\n")
+            escaped = str(clip).replace(chr(92), '/').replace("'", "'\\''")
+            handle.write(f"file '{escaped}'\n")
 
 
 def get_media_duration(file_path: Path) -> float:

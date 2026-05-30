@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import json
 import os
 import sqlite3
 import uuid
 
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Request, UploadFile
+from fastapi import APIRouter, HTTPException, Query, Request, UploadFile
 from pydantic import BaseModel
 
 from packages.file_store.repository import FileStoreRepository
@@ -93,7 +94,12 @@ def _asset_db_path(project_dir: Path) -> Path:
 
 
 @router.get("/{project_id}/assets/indexed")
-def get_indexed_assets(request: Request, project_id: str):
+def get_indexed_assets(
+    request: Request,
+    project_id: str,
+    category: str | None = Query(default=None),
+    q: str | None = Query(default=None),
+):
     project_dir = _project_dir(request.app.state.root_dir, project_id)
     if not project_dir.exists():
         raise HTTPException(status_code=404, detail="project not found")
@@ -112,15 +118,43 @@ def get_indexed_assets(request: Request, project_id: str):
 
     conn = sqlite3.connect(str(db_path))
     conn.row_factory = sqlite3.Row
-    rows = conn.execute("SELECT * FROM assets ORDER BY created_at DESC").fetchall()
+
+    # Build query with optional filters (parameterized to prevent SQL injection)
+    base_query = "SELECT * FROM assets"
+    conditions: list[str] = []
+    params: list[str] = []
+    if category:
+        conditions.append("category = ?")
+        params.append(category)
+    if q:
+        conditions.append("(file_path LIKE ? OR source_video LIKE ? OR tags LIKE ?)")
+        like_q = f"%{q}%"
+        params.extend([like_q, like_q, like_q])
+
+    if conditions:
+        base_query += " WHERE " + " AND ".join(conditions)
+    base_query += " ORDER BY created_at DESC"
+
+    rows = conn.execute(base_query, params).fetchall()
     total_clips = len(rows)
     available_clips = sum(1 for row in rows if row["status"] == "available")
     disabled_clips = sum(1 for row in rows if row["status"] == "disabled")
     source_videos = len({row["source_video"] for row in rows if row["source_video"]})
     conn.close()
 
+    assets = []
+    for row in rows:
+        d = dict(row)
+        raw_tags = d.get("tags")
+        if isinstance(raw_tags, str):
+            try:
+                d["tags"] = json.loads(raw_tags)
+            except (json.JSONDecodeError, TypeError):
+                d["tags"] = []
+        assets.append(d)
+
     return {
-        "assets": [dict(row) for row in rows],
+        "assets": assets,
         "stats": {
             "total_clips": total_clips,
             "available_clips": available_clips,
@@ -158,14 +192,31 @@ def index_assets(request: Request, project_id: str):
 
     if new_videos:
         repository = AssetRepository(db_path)
+
+        from packages.provider_config.store import load_provider_config
+        from packages.pipeline_services.asset_library.vision_client import resolve_vision_config
+
+        providers = load_provider_config(request.app.state.root_dir)
+        vision_config = resolve_vision_config(providers)
+
+        repo = FileStoreRepository(request.app.state.root_dir)
+        meta = repo.load_project_meta(project_id)
+        product = meta.get("product", os.environ.get("PRODUCT", "见手青"))
+
         indexer = AssetIndexer(
             ffmpeg_path=os.environ.get("FFMPEG_PATH", "ffmpeg"),
             repository=repository,
-            product=os.environ.get("PRODUCT", "见手青"),
+            vision_config=vision_config,
+            product=product,
         )
         output_base = project_dir / "runtime" / "indexed_clips"
+        succeeded = 0
         for video in new_videos:
-            indexer._ingest_one_video(video, output_base)
+            try:
+                indexer._ingest_one_video(video, output_base)
+                succeeded += 1
+            except Exception as e:
+                print(f"[INDEX ERROR] {video.name}: {e}")
 
     total_clips = total_before
     if db_path.exists():

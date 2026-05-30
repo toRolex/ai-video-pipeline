@@ -13,6 +13,8 @@ from packages.pipeline_services.asset_library.retriever import AssetRetriever
 def _create_mock_video(output_path: Path, duration: float = 3.0) -> Path:
     """Create a minimal test video using ffmpeg lavfi."""
     ffmpeg = os.environ.get("FFMPEG_PATH", "ffmpeg")
+    if not Path(ffmpeg).exists():
+        ffmpeg = "ffmpeg"
     cmd = [
         ffmpeg,
         "-f", "lavfi",
