@@ -27,6 +27,20 @@ function formatDate(value: string) {
   return date.toLocaleString("zh-CN", { hour12: false });
 }
 
+function resolveAssetMediaUrl(filePath: string) {
+  if (!filePath) {
+    return filePath;
+  }
+  if (filePath.startsWith("/workspace/")) {
+    return filePath;
+  }
+  const workspaceIndex = filePath.indexOf("/workspace/");
+  if (workspaceIndex >= 0) {
+    return filePath.slice(workspaceIndex);
+  }
+  return filePath;
+}
+
 export default function AssetPreviewPanel({ asset, isUpdating = false, onToggleStatus }: Props) {
   if (!asset) {
     return (
@@ -38,6 +52,7 @@ export default function AssetPreviewPanel({ asset, isUpdating = false, onToggleS
 
   const isAvailable = asset.status === "available";
   const nextStatus: AssetRecord["status"] = isAvailable ? "disabled" : "available";
+  const mediaUrl = resolveAssetMediaUrl(asset.file_path);
 
   return (
     <section className="bg-white border border-[#d0d7de] rounded-lg p-4 space-y-4">
@@ -64,7 +79,7 @@ export default function AssetPreviewPanel({ asset, isUpdating = false, onToggleS
 
       <div className="rounded-lg bg-black overflow-hidden">
         <video key={asset.asset_id} controls className="w-full max-h-[360px]" preload="metadata">
-          <source src={asset.file_path} />
+          <source src={mediaUrl} />
           您的浏览器不支持视频播放
         </video>
       </div>
