@@ -21,7 +21,7 @@ from packages.file_store.paths import (
 )
 from packages.file_store.repository import FileStoreRepository
 from packages.pipeline_services.asset_library import AssetIndexer, AssetRepository
-from packages.pipeline_services.asset_library.thumbnail import ThumbnailGenerator, _resolve_tool_path
+from packages.pipeline_services.asset_library.thumbnail import ThumbnailGenerator, _resolve_tool_path, _get_default
 
 router = APIRouter(prefix="/api/assets", tags=["api-assets"])
 
@@ -152,7 +152,7 @@ def index_assets(request: Request):
 
         product = os.environ.get("PRODUCT", "荔枝菌")
 
-        ffmpeg_path = _resolve_tool_path(os.environ.get("FFMPEG_PATH", "ffmpeg"))
+        ffmpeg_path = _resolve_tool_path(_get_default("FFMPEG_PATH", "ffmpeg"))
         indexer = AssetIndexer(
             ffmpeg_path=ffmpeg_path,
             repository=repository,

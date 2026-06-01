@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import platform
 import subprocess
 import logging
 from pathlib import Path
@@ -9,6 +10,19 @@ logger = logging.getLogger(__name__)
 
 FFMPEG_TIMEOUT = 30
 THUMBNAIL_WIDTH = 220
+
+_IS_WINDOWS = platform.system() == "Windows"
+
+_DEFAULT_TOOLS = {
+    "Darwin": {
+        "FFMPEG_PATH": "/opt/homebrew/opt/ffmpeg-full/bin/ffmpeg",
+        "FFPROBE_PATH": "/opt/homebrew/opt/ffmpeg-full/bin/ffprobe",
+    },
+    "Windows": {
+        "FFMPEG_PATH": "tools/bin/ffmpeg.exe",
+        "FFPROBE_PATH": "tools/bin/ffprobe.exe",
+    },
+}
 
 
 def _resolve_tool_path(path_str: str) -> str:
@@ -21,12 +35,17 @@ def _resolve_tool_path(path_str: str) -> str:
     return path_str
 
 
+def _get_default(env_key: str, fallback_name: str) -> str:
+    defaults = _DEFAULT_TOOLS.get(platform.system(), {})
+    return os.environ.get(env_key, defaults.get(env_key, fallback_name))
+
+
 class ThumbnailGenerator:
     def __init__(self, ffmpeg_path: str | None = None) -> None:
         if ffmpeg_path is None:
-            ffmpeg_path = os.environ.get("FFMPEG_PATH", "ffmpeg")
+            ffmpeg_path = _get_default("FFMPEG_PATH", "ffmpeg")
         self.ffmpeg_path = _resolve_tool_path(ffmpeg_path)
-        ffprobe_path = os.environ.get("FFPROBE_PATH", ffmpeg_path.replace("ffmpeg", "ffprobe"))
+        ffprobe_path = _get_default("FFPROBE_PATH", "ffprobe")
         self.ffprobe_path = _resolve_tool_path(ffprobe_path)
 
     def generate(self, video_path: Path, output_path: Path) -> bool:
