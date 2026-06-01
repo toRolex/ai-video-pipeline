@@ -446,7 +446,7 @@ export default function JobPipeline() {
         </div>
       )}
 
-      <div className="flex border rounded-xl overflow-hidden min-h-[500px]">
+      <div className="flex flex-col md:flex-row border rounded-xl min-h-[500px]">
         <PipelineSidebar
           currentPhase={job.phase}
           completedPhases={computeCompletedPhases(job.phase)}
@@ -464,7 +464,7 @@ export default function JobPipeline() {
             }
           }}
         />
-        <div className="flex-1 p-5 bg-[#eff2f5]">{renderDetail()}</div>
+        <div className="flex-1 min-w-0 p-5 bg-[#eff2f5] overflow-x-auto">{renderDetail()}</div>
       </div>
     </div>
   );

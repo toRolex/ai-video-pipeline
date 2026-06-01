@@ -36,27 +36,29 @@ export default function ClipReviewCard({ clip, index, onReject, rejected = false
           </span>
         </div>
       </div>
-      <div className="flex items-center gap-3 p-3">
-        <div className="w-20 h-14 bg-[#eff2f5] rounded overflow-hidden flex-shrink-0">
-          {thumbnailUrl && !imgError ? (
-            <img
-              src={thumbnailUrl}
-              alt={fileName}
-              className="w-full h-full object-cover"
-              onError={() => setImgError(true)}
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-lg">🎬</div>
-          )}
-        </div>
-        <div className="flex-1 min-w-0 overflow-hidden">
-          <div className="text-xs font-medium truncate" title={fileName}>{fileName}</div>
-          <div className="text-xs text-gray-500 mt-0.5 truncate">{clip.asset_id}</div>
+      <div className="p-3">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-20 h-14 bg-[#eff2f5] rounded overflow-hidden flex-shrink-0">
+            {thumbnailUrl && !imgError ? (
+              <img
+                src={thumbnailUrl}
+                alt={fileName}
+                className="w-full h-full object-cover"
+                onError={() => setImgError(true)}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-lg">🎬</div>
+            )}
+          </div>
+          <div className="flex-1 min-w-0 overflow-hidden">
+            <div className="text-xs font-medium truncate" title={fileName}>{fileName}</div>
+            <div className="text-xs text-gray-500 mt-0.5 truncate">{clip.asset_id}</div>
+          </div>
         </div>
         <button
           type="button"
           disabled={rejected}
-          className={`shrink-0 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+          className={`w-full px-3 py-1.5 rounded text-xs font-medium transition-colors ${
             rejected
               ? "bg-gray-100 text-gray-400 cursor-not-allowed"
               : "bg-[#d1242f] text-white hover:bg-[#b6232d]"
