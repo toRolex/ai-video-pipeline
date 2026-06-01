@@ -49,9 +49,9 @@ export default function ClipReviewCard({ clip, index, onReject, rejected = false
             <div className="w-full h-full flex items-center justify-center text-lg">🎬</div>
           )}
         </div>
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 overflow-hidden">
           <div className="text-xs font-medium truncate" title={fileName}>{fileName}</div>
-          <div className="text-xs text-gray-500 mt-0.5">{clip.asset_id}</div>
+          <div className="text-xs text-gray-500 mt-0.5 truncate">{clip.asset_id}</div>
         </div>
         <button
           type="button"
@@ -63,7 +63,7 @@ export default function ClipReviewCard({ clip, index, onReject, rejected = false
           }`}
           onClick={() => onReject(index)}
         >
-          {rejected ? "已打回" : "打回换素材"}
+          {rejected ? "已打回" : "打回检索"}
         </button>
       </div>
     </div>
