@@ -1,6 +1,7 @@
 """Shared asset library routes — all projects see the same global asset pool."""
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import shutil
@@ -10,8 +11,10 @@ import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Query, Request, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
+
+from apps.control_plane.index_tasks import index_task_manager, TaskStatus
 
 from packages.file_store.paths import (
     shared_asset_db_path,
@@ -119,7 +122,7 @@ def get_indexed_assets(
 
 
 @router.post("/index")
-def index_assets(request: Request):
+async def index_assets(request: Request, async_mode: bool = Query(True, alias="async")):
     root_dir: Path = request.app.state.root_dir
     source_dir = shared_source_dir(root_dir)
     source_dir.mkdir(parents=True, exist_ok=True)
@@ -131,27 +134,72 @@ def index_assets(request: Request):
 
     db_path = shared_asset_db_path(root_dir)
     indexed_sources: set[str] = set()
-    total_before = 0
     if db_path.exists():
-        conn = sqlite3.connect(str(db_path))
-        total_before = conn.execute("SELECT COUNT(*) FROM assets").fetchone()[0]
-        conn.close()
         repository_for_check = AssetRepository(db_path)
         indexed_sources = repository_for_check.get_indexed_source_paths()
 
     new_videos = [v for v in videos if str(v.resolve()) not in indexed_sources]
 
-    if new_videos:
-        repository = AssetRepository(db_path)
+    if not new_videos:
+        total_clips = 0
+        if db_path.exists():
+            conn = sqlite3.connect(str(db_path))
+            total_clips = conn.execute("SELECT COUNT(*) FROM assets").fetchone()[0]
+            conn.close()
+        return {"indexed": 0, "skipped": len(videos), "total_clips": total_clips}
 
+    if async_mode:
+        task = index_task_manager.create_task(len(new_videos))
+        asyncio.create_task(_run_index_task(task.task_id, root_dir, new_videos, db_path))
+        return {"task_id": task.task_id, "total_videos": len(new_videos)}
+
+    repository = AssetRepository(db_path)
+    from packages.provider_config.store import load_provider_config
+    from packages.pipeline_services.asset_library.vision_client import resolve_vision_config
+
+    providers = load_provider_config(root_dir)
+    vision_config = resolve_vision_config(providers)
+    product = os.environ.get("PRODUCT", "荔枝菌")
+    ffmpeg_path = _resolve_tool_path(_get_default("FFMPEG_PATH", "ffmpeg"))
+    indexer = AssetIndexer(
+        ffmpeg_path=ffmpeg_path,
+        repository=repository,
+        vision_config=vision_config,
+        product=product,
+    )
+    output_base = shared_indexed_dir(root_dir)
+    for video in new_videos:
+        try:
+            indexer._ingest_one_video(video, output_base)
+            repository.mark_source_indexed(str(video.resolve()))
+        except Exception as e:
+            print(f"[INDEX ERROR] {video.name}: {e}")
+
+    total_clips = 0
+    if db_path.exists():
+        conn = sqlite3.connect(str(db_path))
+        total_clips = conn.execute("SELECT COUNT(*) FROM assets").fetchone()[0]
+        conn.close()
+
+    return {"indexed": len(new_videos), "skipped": len(videos) - len(new_videos), "total_clips": total_clips}
+
+
+async def _run_index_task(task_id: str, root_dir: Path, videos: list[Path], db_path: Path):
+    task = index_task_manager.get_task(task_id)
+    if not task:
+        return
+
+    task.status = TaskStatus.RUNNING
+    index_task_manager.add_log(task_id, f"开始处理 {len(videos)} 个视频")
+
+    try:
+        repository = AssetRepository(db_path)
         from packages.provider_config.store import load_provider_config
         from packages.pipeline_services.asset_library.vision_client import resolve_vision_config
 
         providers = load_provider_config(root_dir)
         vision_config = resolve_vision_config(providers)
-
         product = os.environ.get("PRODUCT", "荔枝菌")
-
         ffmpeg_path = _resolve_tool_path(_get_default("FFMPEG_PATH", "ffmpeg"))
         indexer = AssetIndexer(
             ffmpeg_path=ffmpeg_path,
@@ -160,20 +208,58 @@ def index_assets(request: Request):
             product=product,
         )
         output_base = shared_indexed_dir(root_dir)
-        for video in new_videos:
-            try:
-                indexer._ingest_one_video(video, output_base)
-                repository.mark_source_indexed(str(video.resolve()))
-            except Exception as e:
-                print(f"[INDEX ERROR] {video.name}: {e}")
 
-    total_clips = total_before
-    if db_path.exists():
-        conn = sqlite3.connect(str(db_path))
-        total_clips = conn.execute("SELECT COUNT(*) FROM assets").fetchone()[0]
-        conn.close()
+        for i, video in enumerate(videos):
+            task.current_video = i + 1
+            task.progress = (i / len(videos)) * 100
+            task.current_step = "cut"
+            index_task_manager.add_log(task_id, f"[{i+1}/{len(videos)}] 处理视频: {video.name}")
 
-    return {"indexed": len(new_videos), "skipped": len(videos) - len(new_videos), "total_clips": total_clips}
+            def log_callback(msg: str) -> None:
+                index_task_manager.add_log(task_id, msg)
+
+            await asyncio.get_event_loop().run_in_executor(
+                None, lambda v=video: indexer._ingest_one_video(v, output_base, log_callback=log_callback)
+            )
+            repository.mark_source_indexed(str(video.resolve()))
+            task.current_step = "classify" if i < len(videos) - 1 else "done"
+
+        task.status = TaskStatus.COMPLETED
+        task.progress = 100
+        task.current_step = "done"
+        task.completed_at = __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat()
+        index_task_manager.add_log(task_id, "索引完成")
+    except Exception as e:
+        task.status = TaskStatus.FAILED
+        task.error = str(e)
+        index_task_manager.add_log(task_id, f"错误: {e}")
+
+
+@router.get("/index/{task_id}/status")
+def get_index_status(task_id: str):
+    task = index_task_manager.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="task not found")
+    return {
+        "task_id": task.task_id,
+        "status": task.status.value,
+        "progress": task.progress,
+        "current_step": task.current_step,
+        "current_video": task.current_video,
+        "total_videos": task.total_videos,
+        "error": task.error,
+    }
+
+
+@router.get("/index/{task_id}/logs")
+async def get_index_logs(task_id: str):
+    task = index_task_manager.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="task not found")
+    return StreamingResponse(
+        index_task_manager.get_log_stream(task_id),
+        media_type="text/event-stream",
+    )
 
 
 @router.patch("/batch")

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { AssetCategory, AssetRecord, AssetStats, IndexStatus } from "../types";
 import AssetGrid from "../components/AssetGrid";
@@ -45,9 +45,12 @@ export default function SmartAssetLibrary({ projectId: _projectId, onUpload: _on
   const [indexProgress, setIndexProgress] = useState(0);
   const [indexCurrent, setIndexCurrent] = useState(0);
   const [indexTotal, setIndexTotal] = useState(0);
+  const [indexTaskId, setIndexTaskId] = useState<string | null>(null);
 
   const [isBatchUpdating, setIsBatchUpdating] = useState(false);
   const [isPreviewUpdating, setIsPreviewUpdating] = useState(false);
+
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadAssets = useCallback(async () => {
     const res = await api.listIndexedAssetsShared();
@@ -98,6 +101,40 @@ export default function SmartAssetLibrary({ projectId: _projectId, onUpload: _on
     });
   }, []);
 
+  const pollIndexProgress = useCallback(
+    async (taskId: string) => {
+      try {
+        const status = await api.getIndexStatus(taskId);
+
+        setIndexProgress(status.progress);
+        setIndexStep(status.current_step);
+        setIndexCurrent(status.current_video);
+        setIndexTotal(status.total_videos);
+
+        if (status.status === "completed") {
+          setIndexStatus("done");
+          setIndexStep("done");
+          setIndexProgress(100);
+          if (pollIntervalRef.current) {
+            clearInterval(pollIntervalRef.current);
+            pollIntervalRef.current = null;
+          }
+          await loadAssets();
+        } else if (status.status === "failed") {
+          setIndexStatus("idle");
+          if (pollIntervalRef.current) {
+            clearInterval(pollIntervalRef.current);
+            pollIntervalRef.current = null;
+          }
+          console.error("Index failed:", status.error);
+        }
+      } catch (error) {
+        console.error("Poll failed:", error);
+      }
+    },
+    [loadAssets]
+  );
+
   const handleUploadConfirm = useCallback(
     async (files: File[]) => {
       if (files.length === 0) {
@@ -106,8 +143,8 @@ export default function SmartAssetLibrary({ projectId: _projectId, onUpload: _on
 
       setIndexStatus("processing");
       setIndexStep("cut");
-      setIndexProgress(10);
-      setIndexCurrent(1);
+      setIndexProgress(0);
+      setIndexCurrent(0);
       setIndexTotal(files.length);
 
       try {
@@ -115,28 +152,33 @@ export default function SmartAssetLibrary({ projectId: _projectId, onUpload: _on
           await api.uploadAssetShared(file);
         }
 
-        setIndexStep("frame");
-        setIndexProgress(40);
+        const result = await api.indexAssetsSharedAsync();
+        setIndexTaskId(result.task_id);
 
-        const result = await api.indexAssetsShared();
+        pollIntervalRef.current = setInterval(() => {
+          pollIndexProgress(result.task_id);
+        }, 1000);
 
-        setIndexStep("classify");
-        setIndexProgress(80);
-        setIndexCurrent(Math.max(result.indexed, 1));
-        setIndexTotal(Math.max(result.indexed, files.length));
-
-        setIndexStep("done");
-        setIndexProgress(100);
-        setIndexStatus("done");
-
-        await loadAssets();
+        await pollIndexProgress(result.task_id);
       } catch (error) {
         setIndexStatus("idle");
+        if (pollIntervalRef.current) {
+          clearInterval(pollIntervalRef.current);
+          pollIntervalRef.current = null;
+        }
         throw error;
       }
     },
-    [loadAssets]
+    [pollIndexProgress]
   );
+
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+    };
+  }, []);
 
   const handleBatchUpdate = useCallback(
     async (status: "available" | "disabled") => {
@@ -291,6 +333,8 @@ export default function SmartAssetLibrary({ projectId: _projectId, onUpload: _on
           current={indexCurrent}
           total={indexTotal}
           skippedCount={Math.max(stats.total - indexCurrent, 0)}
+          taskId={indexTaskId}
+          isRunning={indexStatus === "processing"}
         />
       )}
 

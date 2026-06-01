@@ -119,6 +119,14 @@ export const api = {
   indexAssetsShared: () =>
     request<import("../types").IndexResult>("/api/assets/index", { method: "POST" }),
 
+  indexAssetsSharedAsync: () =>
+    request<{ task_id: string; total_videos: number }>("/api/assets/index?async=true", { method: "POST" }),
+
+  getIndexStatus: (taskId: string) =>
+    request<import("../types").IndexTaskState>(`/api/assets/index/${taskId}/status`),
+
+  getIndexLogsUrl: (taskId: string) => `/api/assets/index/${taskId}/logs`,
+
   updateAssetStatusShared: (assetIds: string[], status: string) =>
     request<{ updated: number }>("/api/assets/batch", {
       method: "PATCH",

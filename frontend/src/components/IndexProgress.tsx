@@ -1,12 +1,24 @@
+import VisionLogs from "./VisionLogs";
+
 interface Props {
   step: string;
   progress: number;
   current: number;
   total: number;
   skippedCount: number;
+  taskId?: string | null;
+  isRunning?: boolean;
 }
 
-export default function IndexProgress({ step, progress, current, total, skippedCount }: Props) {
+export default function IndexProgress({
+  step,
+  progress,
+  current,
+  total,
+  skippedCount,
+  taskId = null,
+  isRunning = false,
+}: Props) {
   const STEPS = [
     { key: "cut", label: "场景切分" },
     { key: "frame", label: "关键帧提取" },
@@ -44,6 +56,7 @@ export default function IndexProgress({ step, progress, current, total, skippedC
           已有 {skippedCount} 个切片不受影响，仅处理新视频
         </div>
       )}
+      <VisionLogs taskId={taskId} isRunning={isRunning} />
     </div>
   );
 }

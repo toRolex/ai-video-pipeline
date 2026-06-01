@@ -117,6 +117,18 @@ export interface ProviderSection {
   providers: Record<string, Record<string, unknown>>;
 }
 
+export type IndexTaskStatus = "pending" | "running" | "completed" | "failed";
+
+export interface IndexTaskState {
+  task_id: string;
+  status: IndexTaskStatus;
+  progress: number;
+  current_step: string;
+  current_video: number;
+  total_videos: number;
+  error: string | null;
+}
+
 export interface ProviderConfig {
   providers: Record<string, ProviderSection>;
 }
