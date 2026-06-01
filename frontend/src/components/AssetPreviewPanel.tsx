@@ -1,9 +1,24 @@
+import { useState } from "react";
 import type { AssetRecord } from "../types";
+
+const CATEGORIES = [
+  "产地溯源",
+  "筛选分拣",
+  "清洗泡发",
+  "切配处理",
+  "下锅入锅",
+  "烹饪翻炒",
+  "出锅装盘",
+  "成品展示",
+  "试吃品尝",
+  "产品特写",
+];
 
 interface Props {
   asset: AssetRecord | null;
   isUpdating?: boolean;
   onToggleStatus?: (asset: AssetRecord, nextStatus: AssetRecord["status"]) => void;
+  onUpdateFields?: (asset: AssetRecord, fields: { product?: string; category?: string }) => Promise<void>;
 }
 
 function formatDuration(seconds: number) {
@@ -68,7 +83,12 @@ function parseAssetTags(rawTags: unknown) {
   return [];
 }
 
-export default function AssetPreviewPanel({ asset, isUpdating = false, onToggleStatus }: Props) {
+export default function AssetPreviewPanel({ asset, isUpdating = false, onToggleStatus, onUpdateFields }: Props) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editProduct, setEditProduct] = useState("");
+  const [editCategory, setEditCategory] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
   if (!asset) {
     return (
       <section className="bg-white border border-[#d0d7de] rounded-lg p-6">
@@ -82,6 +102,30 @@ export default function AssetPreviewPanel({ asset, isUpdating = false, onToggleS
   const mediaUrl = resolveAssetMediaUrl(asset.file_path);
   const tags = parseAssetTags(asset.tags as unknown);
 
+  const handleStartEdit = () => {
+    setEditProduct(asset.product);
+    setEditCategory(asset.category);
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!onUpdateFields) return;
+    setIsSaving(true);
+    try {
+      await onUpdateFields(asset, {
+        product: editProduct,
+        category: editCategory,
+      });
+      setIsEditing(false);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <section className="bg-white border border-[#d0d7de] rounded-lg p-4 space-y-4">
       <div className="flex items-center justify-between">
@@ -91,18 +135,51 @@ export default function AssetPreviewPanel({ asset, isUpdating = false, onToggleS
           </h3>
           <p className="text-xs text-gray-500 mt-1 break-all">{asset.file_path}</p>
         </div>
-        <button
-          type="button"
-          className={`text-xs px-3 py-1.5 rounded border transition-colors ${
-            isAvailable
-              ? "border-[#d1242f] text-[#d1242f] hover:bg-[#ffebe9]"
-              : "border-[#1a7f37] text-[#1a7f37] hover:bg-[#dafbe1]"
-          } disabled:opacity-50 disabled:cursor-not-allowed`}
-          onClick={() => onToggleStatus?.(asset, nextStatus)}
-          disabled={isUpdating || !onToggleStatus}
-        >
-          {isAvailable ? "禁用素材" : "启用素材"}
-        </button>
+        <div className="flex gap-2">
+          {isEditing ? (
+            <>
+              <button
+                type="button"
+                className="text-xs px-3 py-1.5 rounded border border-[#1a7f37] text-[#1a7f37] hover:bg-[#dafbe1] disabled:opacity-50"
+                onClick={handleSaveEdit}
+                disabled={isSaving}
+              >
+                {isSaving ? "保存中..." : "保存"}
+              </button>
+              <button
+                type="button"
+                className="text-xs px-3 py-1.5 rounded border border-gray-300 text-gray-600 hover:bg-gray-50"
+                onClick={handleCancelEdit}
+                disabled={isSaving}
+              >
+                取消
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="text-xs px-3 py-1.5 rounded border border-[#0969da] text-[#0969da] hover:bg-[#ddf4ff]"
+                onClick={handleStartEdit}
+                disabled={!onUpdateFields}
+              >
+                编辑
+              </button>
+              <button
+                type="button"
+                className={`text-xs px-3 py-1.5 rounded border transition-colors ${
+                  isAvailable
+                    ? "border-[#d1242f] text-[#d1242f] hover:bg-[#ffebe9]"
+                    : "border-[#1a7f37] text-[#1a7f37] hover:bg-[#dafbe1]"
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+                onClick={() => onToggleStatus?.(asset, nextStatus)}
+                disabled={isUpdating || !onToggleStatus}
+              >
+                {isAvailable ? "禁用素材" : "启用素材"}
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="rounded-lg bg-black overflow-hidden">
@@ -114,10 +191,36 @@ export default function AssetPreviewPanel({ asset, isUpdating = false, onToggleS
 
       <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
         <div className="text-gray-500">分类</div>
-        <div>{asset.category}</div>
+        <div>
+          {isEditing ? (
+            <select
+              className="border rounded px-2 py-1 text-sm w-full"
+              value={editCategory}
+              onChange={(e) => setEditCategory(e.target.value)}
+            >
+              {CATEGORIES.map((cat) => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          ) : (
+            asset.category
+          )}
+        </div>
 
         <div className="text-gray-500">产品</div>
-        <div>{asset.product}</div>
+        <div>
+          {isEditing ? (
+            <input
+              type="text"
+              className="border rounded px-2 py-1 text-sm w-full"
+              value={editProduct}
+              onChange={(e) => setEditProduct(e.target.value)}
+              placeholder="输入产品名称"
+            />
+          ) : (
+            asset.product
+          )}
+        </div>
 
         <div className="text-gray-500">置信度</div>
         <div>{formatConfidence(asset.confidence)}</div>

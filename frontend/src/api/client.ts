@@ -122,6 +122,12 @@ export const api = {
       body: JSON.stringify({ asset_ids: assetIds, status }),
     }),
 
+  updateAssetFields: (assetId: string, fields: { product?: string; category?: string }) =>
+    request<{ updated: number }>(`/api/assets/${assetId}/fields`, {
+      method: "PATCH",
+      body: JSON.stringify(fields),
+    }),
+
   migrateAssets: () =>
     request<{ migrated_projects: number; migrated_clips: number; migrated_sources: number }>(
       "/api/assets/migrate",

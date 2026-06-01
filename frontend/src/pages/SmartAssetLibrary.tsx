@@ -179,6 +179,29 @@ export default function SmartAssetLibrary({ projectId, onUpload }: Props) {
     [isPreviewUpdating, loadAssets]
   );
 
+  const handlePreviewFieldsUpdate = useCallback(
+    async (asset: AssetRecord, fields: { product?: string; category?: string }) => {
+      if (isPreviewUpdating) {
+        return;
+      }
+
+      setIsPreviewUpdating(true);
+      try {
+        await api.updateAssetFields(asset.asset_id, fields);
+        await loadAssets();
+        setPreviewAsset((prev) => {
+          if (!prev || prev.asset_id !== asset.asset_id) {
+            return prev;
+          }
+          return { ...prev, ...fields };
+        });
+      } finally {
+        setIsPreviewUpdating(false);
+      }
+    },
+    [isPreviewUpdating, loadAssets]
+  );
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -252,6 +275,7 @@ export default function SmartAssetLibrary({ projectId, onUpload }: Props) {
           onToggleStatus={(asset, nextStatus) => {
             void handlePreviewStatusToggle(asset, nextStatus);
           }}
+          onUpdateFields={handlePreviewFieldsUpdate}
         />
       </div>
     </div>

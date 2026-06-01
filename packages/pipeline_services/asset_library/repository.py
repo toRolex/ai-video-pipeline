@@ -112,6 +112,25 @@ class AssetRepository:
         conn.commit()
         conn.close()
 
+    def update_fields(self, asset_id: str, **kwargs) -> bool:
+        allowed = {"product", "category", "status", "tags"}
+        updates = {k: v for k, v in kwargs.items() if k in allowed}
+        if not updates:
+            return False
+        if "category" in updates and isinstance(updates["category"], Category):
+            updates["category"] = updates["category"].value
+        if "tags" in updates and isinstance(updates["tags"], list):
+            updates["tags"] = json.dumps(updates["tags"], ensure_ascii=False)
+        set_clause = ", ".join(f"{k} = ?" for k in updates)
+        values = list(updates.values()) + [asset_id]
+        conn = sqlite3.connect(str(self.db_path))
+        cursor = conn.execute(
+            f"UPDATE assets SET {set_clause} WHERE asset_id = ?", values
+        )
+        conn.commit()
+        conn.close()
+        return cursor.rowcount > 0
+
     def count_by_category(self, product: str, category: Category) -> int:
         conn = sqlite3.connect(str(self.db_path))
         row = conn.execute(

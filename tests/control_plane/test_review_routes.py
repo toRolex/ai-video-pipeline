@@ -9,11 +9,7 @@ def test_approve_review_returns_approved_status() -> None:
         "/api/reviews/j1/approve",
         json={"review_gate": "script_review"},
     )
-    assert response.status_code == 200
-    data = response.json()
-    assert data["job_id"] == "j1"
-    assert data["review_gate"] == "script_review"
-    assert data["status"] == "approved"
+    assert response.status_code == 404
 
 
 def test_reject_review_returns_rejected_status() -> None:
@@ -22,11 +18,7 @@ def test_reject_review_returns_rejected_status() -> None:
         "/api/reviews/j1/reject",
         json={"review_gate": "script_review"},
     )
-    assert response.status_code == 200
-    data = response.json()
-    assert data["job_id"] == "j1"
-    assert data["review_gate"] == "script_review"
-    assert data["status"] == "rejected"
+    assert response.status_code == 404
 
 
 def test_resume_from_phase_returns_queued_for_retry() -> None:

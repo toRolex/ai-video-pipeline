@@ -224,6 +224,40 @@ async def patch_asset_status(request: Request, asset_id: str):
     return {"updated": updated}
 
 
+@router.patch("/{asset_id}/fields")
+async def patch_asset_fields(request: Request, asset_id: str):
+    body = await request.json()
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="request body must be object")
+
+    root_dir: Path = request.app.state.root_dir
+    db_path = shared_asset_db_path(root_dir)
+    if not db_path.exists():
+        raise HTTPException(status_code=404, detail="asset db not found")
+
+    repo = AssetRepository(db_path)
+    record = repo.query_one(asset_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="asset not found")
+
+    updates = {}
+    if "product" in body:
+        updates["product"] = body["product"]
+    if "category" in body:
+        from packages.pipeline_services.asset_library.models import Category
+        try:
+            updates["category"] = Category(body["category"])
+        except ValueError:
+            valid = [c.value for c in Category]
+            raise HTTPException(status_code=400, detail=f"invalid category, must be one of: {valid}")
+
+    if not updates:
+        return {"updated": 0}
+
+    repo.update_fields(asset_id, **updates)
+    return {"updated": 1}
+
+
 @router.post("/migrate")
 def migrate_project_assets(request: Request):
     """Migrate all per-project assets into the shared library."""
