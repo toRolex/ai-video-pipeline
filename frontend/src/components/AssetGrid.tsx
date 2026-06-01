@@ -67,6 +67,7 @@ export default function AssetGrid({ assets, selectedIds, onToggleSelect, onPrevi
           >
             <AssetCard
               asset={{
+                asset_id: asset.asset_id,
                 name: fileName,
                 size_bytes: 0,
                 duration_seconds: asset.duration_seconds,
