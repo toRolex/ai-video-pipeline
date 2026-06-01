@@ -1,6 +1,8 @@
+import { useState } from "react";
 import type { AssetFile } from "../types";
 
 type AssetCardData = AssetFile & {
+  asset_id?: string;
   category?: string;
   confidence?: number;
 };
@@ -13,6 +15,7 @@ interface Props {
 }
 
 export default function AssetCard({ asset, onDelete, selected = false, onSelect }: Props) {
+  const [imgError, setImgError] = useState(false);
   const seconds = asset.duration_seconds || 0;
   const min = Math.floor(seconds / 60);
   const sec = String(Math.floor(seconds % 60)).padStart(2, "0");
@@ -27,14 +30,25 @@ export default function AssetCard({ asset, onDelete, selected = false, onSelect 
       : "border-[#d0d7de] bg-white";
 
   const isSelectable = Boolean(onSelect);
+  const thumbnailUrl = asset.asset_id ? `/api/assets/${asset.asset_id}/thumbnail` : null;
 
   return (
     <div
       className={`w-44 text-left border rounded-lg overflow-hidden flex-shrink-0 transition-colors ${containerClass}`}
       role="group"
     >
-      <div className="h-[90px] bg-[#eff2f5] flex items-center justify-center text-[28px]">
-        {"🎬"}
+      <div className="h-[124px] bg-[#eff2f5] flex items-center justify-center overflow-hidden">
+        {thumbnailUrl && !imgError ? (
+          <img
+            src={thumbnailUrl}
+            alt={asset.name}
+            className="w-full h-full object-cover"
+            onError={() => setImgError(true)}
+            loading="lazy"
+          />
+        ) : (
+          <span className="text-[28px]">{"🎬"}</span>
+        )}
       </div>
       <div className="p-2 text-xs">
         <div className="font-medium truncate" title={asset.name}>{asset.name}</div>
