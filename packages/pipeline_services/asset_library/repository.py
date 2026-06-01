@@ -66,6 +66,15 @@ class AssetRepository:
         conn.commit()
         conn.close()
 
+    def query_one(self, asset_id: str) -> AssetRecord | None:
+        conn = sqlite3.connect(str(self.db_path))
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            "SELECT * FROM assets WHERE asset_id = ?", (asset_id,)
+        ).fetchone()
+        conn.close()
+        return _row_to_record(row) if row else None
+
     def query_by_category(self, product: str, category: Category) -> list[AssetRecord]:
         conn = sqlite3.connect(str(self.db_path))
         conn.row_factory = sqlite3.Row
