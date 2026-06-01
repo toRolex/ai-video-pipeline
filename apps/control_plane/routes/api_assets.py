@@ -460,6 +460,7 @@ async def batch_delete_assets(request: Request):
     conn.row_factory = sqlite3.Row
     deleted = 0
     files_deleted = 0
+    thumbnail_dir = shared_assets_root(root_dir) / "thumbnails"
 
     for aid in asset_ids:
         row = conn.execute("SELECT file_path FROM assets WHERE asset_id = ?", (aid,)).fetchone()
@@ -470,7 +471,15 @@ async def batch_delete_assets(request: Request):
                     file_path.unlink()
                     files_deleted += 1
                 except OSError:
-                    pass  # File deletion failed, continue with DB deletion
+                    pass
+
+            thumb_path = thumbnail_dir / f"{aid}.jpg"
+            if thumb_path.exists():
+                try:
+                    thumb_path.unlink()
+                except OSError:
+                    pass
+
             cursor = conn.execute("DELETE FROM assets WHERE asset_id = ?", (aid,))
             deleted += cursor.rowcount
 
@@ -524,6 +533,10 @@ async def delete_asset(request: Request, asset_id: str):
     file_path = Path(record.file_path)
     if file_path.exists():
         file_path.unlink()
+
+    thumbnail_path = shared_assets_root(root_dir) / "thumbnails" / f"{asset_id}.jpg"
+    if thumbnail_path.exists():
+        thumbnail_path.unlink()
 
     conn = sqlite3.connect(str(db_path))
     conn.execute("DELETE FROM assets WHERE asset_id = ?", (asset_id,))
