@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import subprocess
 import logging
 from pathlib import Path
@@ -10,10 +11,23 @@ FFMPEG_TIMEOUT = 30
 THUMBNAIL_WIDTH = 220
 
 
+def _resolve_tool_path(path_str: str) -> str:
+    """Resolve tool path: if it looks like a relative path (contains separators), make it absolute relative to CWD."""
+    if "/" in path_str or "\\" in path_str:
+        p = Path(path_str)
+        if not p.is_absolute():
+            p = Path.cwd() / p
+        return str(p)
+    return path_str
+
+
 class ThumbnailGenerator:
-    def __init__(self, ffmpeg_path: str = "ffmpeg") -> None:
-        self.ffmpeg_path = ffmpeg_path
-        self.ffprobe_path = ffmpeg_path.replace("ffmpeg", "ffprobe")
+    def __init__(self, ffmpeg_path: str | None = None) -> None:
+        if ffmpeg_path is None:
+            ffmpeg_path = os.environ.get("FFMPEG_PATH", "ffmpeg")
+        self.ffmpeg_path = _resolve_tool_path(ffmpeg_path)
+        ffprobe_path = os.environ.get("FFPROBE_PATH", ffmpeg_path.replace("ffmpeg", "ffprobe"))
+        self.ffprobe_path = _resolve_tool_path(ffprobe_path)
 
     def generate(self, video_path: Path, output_path: Path) -> bool:
         try:
