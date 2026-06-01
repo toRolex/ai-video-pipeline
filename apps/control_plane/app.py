@@ -26,7 +26,7 @@ from packages.pipeline_services.legacy_script_bridge import LegacyScriptBridge
 from packages.pipeline_services.media_utils import write_concat_file, get_media_duration
 from main_controller import load_environment
 
-REVIEW_PHASES = {"script_review", "final_review"}
+REVIEW_PHASES = {"script_review", "tts_review", "final_review"}
 AUTO_TICK_INTERVAL = 3  # seconds between auto-advances in dev mode
 
 
@@ -85,6 +85,16 @@ def _phase_to_artifacts(phase: str, job_id: str, project_dir: Path, root_dir: Pa
             print(f"[TTS WARN] No script text found in {job_dir}", flush=True)
             for f2 in job_dir.iterdir():
                 print(f"  file: {f2.name}", flush=True)
+
+    elif phase == "tts_review":
+        # TTS review phase: just return existing audio artifact for review
+        audio_path = job_dir / "audio.mp3"
+        if audio_path.exists():
+            rel = _to_url_path(audio_path, workspace_dir)
+            result.append({"kind": "tts_audio", "relative_path": rel, "url": f"/workspace/{rel}", "size_bytes": audio_path.stat().st_size})
+            print(f"[TTS_REVIEW] Audio ready for review: {audio_path}", flush=True)
+        else:
+            print(f"[TTS_REVIEW WARN] No audio found in {job_dir}", flush=True)
 
     elif phase == "subtitle_generating":
         audio_path = job_dir / "audio.mp3"

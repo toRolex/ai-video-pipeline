@@ -99,15 +99,21 @@ def reject_review(job_id: str, payload: ReviewAction, request: Request) -> dict:
     if not project_id:
         raise HTTPException(status_code=404, detail="job not found")
     record = repo.load_job(project_id, job_id)
+    
+    if record.phase == "tts_review":
+        reject_target = "tts_generating"
+    else:
+        reject_target = "queued"
+    
     repo.save_job(
         project_id,
-        record.model_copy(update={"phase": "queued", "review_status": "none"}),
+        record.model_copy(update={"phase": reject_target, "review_status": "none"}),
     )
     dispatcher = request.app.state.dispatcher
     dispatcher.enqueue_demo_job(project_id, job_id)
     repo.append_review_event(project_id, {"job_id": job_id, "gate": payload.review_gate, "action": "rejected"})
-    logger.info(f"[Review] 打回重做: job={job_id}")
-    return {"status": "rejected", "job_id": job_id, "next_phase": "queued"}
+    logger.info(f"[Review] 打回重做: job={job_id}, target={reject_target}")
+    return {"status": "rejected", "job_id": job_id, "next_phase": reject_target}
 
 
 @router.post("/{job_id}/edit-script")
