@@ -269,14 +269,16 @@ export default function SmartAssetLibrary({ projectId, onUpload }: Props) {
           onPreview={setPreviewAsset}
         />
 
-        <AssetPreviewPanel
-          asset={previewAsset}
-          isUpdating={isPreviewUpdating}
-          onToggleStatus={(asset, nextStatus) => {
-            void handlePreviewStatusToggle(asset, nextStatus);
-          }}
-          onUpdateFields={handlePreviewFieldsUpdate}
-        />
+        <div className="xl:sticky xl:top-4">
+          <AssetPreviewPanel
+            asset={previewAsset}
+            isUpdating={isPreviewUpdating}
+            onToggleStatus={(asset, nextStatus) => {
+              void handlePreviewStatusToggle(asset, nextStatus);
+            }}
+            onUpdateFields={handlePreviewFieldsUpdate}
+          />
+        </div>
       </div>
     </div>
   );
