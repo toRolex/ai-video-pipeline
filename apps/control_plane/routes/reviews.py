@@ -11,7 +11,7 @@ from packages.pipeline_services.legacy_script_bridge import LegacyScriptBridge
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/reviews", tags=["reviews"])
+router = APIRouter(prefix="/api/reviews", tags=["reviews"])
 templates = Jinja2Templates(
     directory=str(Path(__file__).resolve().parent.parent / "templates")
 )
