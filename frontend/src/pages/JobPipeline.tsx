@@ -123,6 +123,26 @@ export default function JobPipeline() {
     api.retryJob(job.job_id);
   };
 
+  const handleEditScript = async (newScript: string) => {
+    try {
+      await api.editScript(job.job_id, newScript, job.project_id);
+      load();
+    } catch (e) {
+      console.error("edit script failed", e);
+      setError("编辑脚本失败");
+    }
+  };
+
+  const handleRegenerateWithPrompt = async (prompt: string) => {
+    try {
+      await api.regenerateWithPrompt(job.job_id, prompt, job.project_id);
+      load();
+    } catch (e) {
+      console.error("regenerate with prompt failed", e);
+      setError("重新生成失败");
+    }
+  };
+
   const findArtifact = (kind: string) => {
     return job.artifacts?.find((a) => a.kind === kind);
   };
@@ -141,6 +161,8 @@ export default function JobPipeline() {
             onApprove={() => handleApprove("script")}
             onReject={() => handleReject("script")}
             onRegenerate={handleRetry}
+            onEdit={handleEditScript}
+            onRegenerateWithPrompt={handleRegenerateWithPrompt}
           />
         );
       }
