@@ -60,7 +60,7 @@ def test_post_index_skips_existing_source_video(tmp_path: Path, monkeypatch) -> 
         asset_id="asset_existing",
         file_path=str((project_dir / "runtime" / "indexed_clips" / "x.mp4").resolve()),
         category=Category.MACRO,
-        product="见手青",
+        product="荔枝菌",
         source_video=str((source_dir / "a.mp4").resolve()),
     ))
 
@@ -71,9 +71,9 @@ def test_post_index_skips_existing_source_video(tmp_path: Path, monkeypatch) -> 
         repo_local = self.repository
         repo_local.insert(AssetRecord(
             asset_id=f"asset_{video_path.stem}",
-            file_path=str((output_base / "见手青" / "产品特写" / f"{video_path.stem}_001.mp4").resolve()),
+            file_path=str((output_base / "荔枝菌" / "产品特写" / f"{video_path.stem}_001.mp4").resolve()),
             category=Category.MACRO,
-            product="见手青",
+            product="荔枝菌",
             source_video=str(video_path.resolve()),
         ))
         return []
@@ -104,7 +104,7 @@ def test_patch_asset_status_supports_batch(tmp_path: Path) -> None:
             asset_id=asset_id,
             file_path=str((project_dir / "runtime" / f"{asset_id}.mp4").resolve()),
             category=Category.MACRO,
-            product="见手青",
+            product="荔枝菌",
         ))
 
     resp = client.patch(
@@ -131,7 +131,7 @@ def test_patch_asset_status_updates_single_asset(tmp_path: Path) -> None:
         asset_id="asset_1",
         file_path=str((project_dir / "runtime" / "asset_1.mp4").resolve()),
         category=Category.MACRO,
-        product="见手青",
+        product="荔枝菌",
     ))
 
     resp = client.patch(

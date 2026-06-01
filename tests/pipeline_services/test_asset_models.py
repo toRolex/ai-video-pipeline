@@ -18,9 +18,9 @@ class TestAssetRecord:
     def test_create_minimal_record(self):
         record = AssetRecord(
             asset_id="clip_001",
-            file_path="/data/见手青/切配处理/clip_001.mp4",
+            file_path="/data/荔枝菌/切配处理/clip_001.mp4",
             category=Category.CUTTING,
-            product="见手青",
+            product="荔枝菌",
         )
         assert record.status == "available"
         assert record.usage_count == 0

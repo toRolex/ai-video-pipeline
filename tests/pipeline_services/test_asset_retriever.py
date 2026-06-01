@@ -14,7 +14,7 @@ def repo(tmp_path):
             asset_id=f"r{i}",
             file_path=f"/data/{cat.value}/clip_{i}.mp4",
             category=cat,
-            product="见手青",
+            product="荔枝菌",
             confidence=0.8,
         ))
     yield r
@@ -22,8 +22,8 @@ def repo(tmp_path):
 
 def test_retrieve_matches_keywords(repo):
     retriever = AssetRetriever(repo)
-    script = "见手青切好以后下锅翻炒。充分烹熟后出锅装盘。"
-    results = retriever.retrieve(script, "见手青")
+    script = "荔枝菌切好以后下锅翻炒。充分烹熟后出锅装盘。"
+    results = retriever.retrieve(script, "荔枝菌")
     assert len(results) >= 1
     categories = [r["category"] for r in results]
     assert "切配处理" in categories or "烹饪翻炒" in categories
@@ -32,7 +32,7 @@ def test_retrieve_matches_keywords(repo):
 def test_retrieve_fallback_when_no_match(repo):
     retriever = AssetRetriever(repo)
     script = "今天天气真好。出去散步。"
-    results = retriever.retrieve(script, "见手青")
+    results = retriever.retrieve(script, "荔枝菌")
     assert len(results) == 2
     assert all(r["method"] == "fallback" for r in results)
 

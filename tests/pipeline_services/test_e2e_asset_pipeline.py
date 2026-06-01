@@ -47,17 +47,17 @@ class TestE2EAssetPipeline:
         records = [
             AssetRecord(
                 asset_id="e2e_001", file_path=str(source_dir / "clip_cut.mp4"),
-                category=Category.CUTTING, product="见手青", confidence=0.9,
+                category=Category.CUTTING, product="荔枝菌", confidence=0.9,
                 duration_seconds=3.0, status="available",
             ),
             AssetRecord(
                 asset_id="e2e_002", file_path=str(source_dir / "clip_stir.mp4"),
-                category=Category.STIR_FRY, product="见手青", confidence=0.8,
+                category=Category.STIR_FRY, product="荔枝菌", confidence=0.8,
                 duration_seconds=3.0, status="available",
             ),
             AssetRecord(
                 asset_id="e2e_003", file_path=str(source_dir / "clip_macro.mp4"),
-                category=Category.MACRO, product="见手青", confidence=0.7,
+                category=Category.MACRO, product="荔枝菌", confidence=0.7,
                 duration_seconds=3.0, status="available",
             ),
         ]
@@ -65,14 +65,14 @@ class TestE2EAssetPipeline:
             repo.insert(r)
 
         # 3. Verify query
-        results = repo.query_by_category("见手青", Category.CUTTING)
+        results = repo.query_by_category("荔枝菌", Category.CUTTING)
         assert len(results) == 1
         assert results[0].asset_id == "e2e_001"
 
         # 4. Run retrieval against a real script
         retriever = AssetRetriever(repo)
-        script = "见手青切片后下锅翻炒。充分烹熟后出锅装盘。这是成品展示。"
-        selected = retriever.retrieve(script, "见手青")
+        script = "荔枝菌切片后下锅翻炒。充分烹熟后出锅装盘。这是成品展示。"
+        selected = retriever.retrieve(script, "荔枝菌")
 
         assert len(selected) == 3
         categories = [s["category"] for s in selected]
@@ -88,12 +88,12 @@ class TestE2EAssetPipeline:
 
         repo.insert(AssetRecord(
             asset_id="fb_001", file_path="/x.mp4",
-            category=Category.MACRO, product="见手青",
+            category=Category.MACRO, product="荔枝菌",
         ))
 
         retriever = AssetRetriever(repo)
         script = "今天天气真好。出去散步走走。"
-        selected = retriever.retrieve(script, "见手青")
+        selected = retriever.retrieve(script, "荔枝菌")
 
         assert len(selected) >= 1
         assert selected[0]["method"] == "fallback"

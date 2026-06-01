@@ -7,7 +7,7 @@ import JobTable from "../components/JobTable";
 import ScheduleTable from "../components/ScheduleTable";
 import SmartAssetLibrary from "./SmartAssetLibrary";
 
-const PRODUCTS = ["羊肚菌", "见手青", "松茸", "荔枝菌"];
+const PRODUCTS = ["羊肚菌", "荔枝菌", "松茸"];
 const PLATFORMS = [
   { key: "douyin", label: "抖音" },
   { key: "xiaohongshu", label: "小红书" },

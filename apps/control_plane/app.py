@@ -249,7 +249,7 @@ async def _auto_tick(root_dir: Path):
                             target = current
 
                         # Execute real pipeline for the target phase
-                        product = data.get("product", os.environ.get("PRODUCT", "见手青"))
+                        product = data.get("product", os.environ.get("PRODUCT", "荔枝菌"))
                         artifacts = _phase_to_artifacts(target, job_id, project_dir, root_dir, product)
 
                         # Merge artifacts (keep existing, add new ones)

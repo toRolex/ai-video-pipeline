@@ -15,7 +15,7 @@ assertType<AssetRecord>({
   asset_id: "asset_001",
   file_path: "/clips/asset_001.mp4",
   category,
-  product: "见手青",
+  product: "荔枝菌",
   confidence: 0.95,
   duration_seconds: 5,
   status: "available",

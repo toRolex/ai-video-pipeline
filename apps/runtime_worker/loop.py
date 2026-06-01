@@ -43,7 +43,7 @@ class WorkerLoop:
 
         job_dir = attempt_root / "output"
         job_dir.mkdir(parents=True, exist_ok=True)
-        script_result = self.script_bridge.generate(product=os.environ.get("PRODUCT", "见手青"), output_dir=job_dir, mock=False)
+        script_result = self.script_bridge.generate(product=os.environ.get("PRODUCT", "荔枝菌"), output_dir=job_dir, mock=False)
 
         audio_path = job_dir / "audio.mp3"
         self.media_bridge.synthesize_tts(script_result["final_script"], audio_path)

@@ -380,7 +380,7 @@ def generate_script(args: argparse.Namespace) -> dict[str, Any]:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="两段式 LLM 口播文案生成器，只输出给 TTS 使用的最终正文。")
-    parser.add_argument("product", nargs="?", help="菌菇/品名，例如：见手青、羊肚菌、松茸")
+    parser.add_argument("product", nargs="?", help="菌菇/品名，例如：荔枝菌、羊肚菌、松茸")
     parser.add_argument("--brand", default=DEFAULT_BRAND, help=f"品牌名，默认：{DEFAULT_BRAND}")
     parser.add_argument("--scene", default=DEFAULT_SCENE, help=f"场景描述，默认：{DEFAULT_SCENE}")
     parser.add_argument("--material", default=DEFAULT_MATERIAL, help=f"素材想象，默认：{DEFAULT_MATERIAL}")
@@ -389,7 +389,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--mock", action="store_true", help="离线模拟，不调用 LLM，用于检查脚本流程")
     args = parser.parse_args()
     if not args.product:
-        args.product = input("请输入菌菇/品名（默认：见手青）：").strip() or "见手青"
+        args.product = input("请输入菌菇/品名（默认：荔枝菌）：").strip() or "荔枝菌"
     return args
 
 
