@@ -441,6 +441,74 @@ def migrate_project_assets(request: Request):
     }
 
 
+@router.delete("/batch")
+async def batch_delete_assets(request: Request):
+    body = await request.json()
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="request body must be object")
+
+    asset_ids = body.get("asset_ids")
+    if not isinstance(asset_ids, list) or not asset_ids or any(not isinstance(i, str) or not i for i in asset_ids):
+        raise HTTPException(status_code=400, detail="asset_ids must be a non-empty string array")
+
+    root_dir: Path = request.app.state.root_dir
+    db_path = shared_asset_db_path(root_dir)
+    if not db_path.exists():
+        return {"deleted": 0}
+
+    conn = sqlite3.connect(str(db_path))
+    conn.row_factory = sqlite3.Row
+    deleted = 0
+    files_deleted = 0
+
+    for aid in asset_ids:
+        row = conn.execute("SELECT file_path FROM assets WHERE asset_id = ?", (aid,)).fetchone()
+        if row:
+            file_path = Path(row["file_path"])
+            if file_path.exists():
+                try:
+                    file_path.unlink()
+                    files_deleted += 1
+                except OSError:
+                    pass  # File deletion failed, continue with DB deletion
+            cursor = conn.execute("DELETE FROM assets WHERE asset_id = ?", (aid,))
+            deleted += cursor.rowcount
+
+    conn.commit()
+    conn.close()
+    return {"deleted": deleted, "files_deleted": files_deleted}
+
+
+@router.get("/{asset_id}/thumbnail")
+async def get_asset_thumbnail(request: Request, asset_id: str):
+    root_dir: Path = request.app.state.root_dir
+    db_path = shared_asset_db_path(root_dir)
+    if not db_path.exists():
+        raise HTTPException(status_code=404, detail="asset db not found")
+
+    repo = AssetRepository(db_path)
+    record = repo.query_one(asset_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="asset not found")
+
+    thumbnail_dir = shared_assets_root(root_dir) / "thumbnails"
+    thumbnail_path = thumbnail_dir / f"{asset_id}.jpg"
+
+    if not thumbnail_path.exists():
+        video_path = Path(record.file_path)
+        if not video_path.exists():
+            raise HTTPException(status_code=404, detail="video file not found")
+
+        from packages.pipeline_services.asset_library.thumbnail import ThumbnailGenerator
+        generator = ThumbnailGenerator()
+        success = generator.generate(video_path, thumbnail_path)
+        if not success:
+            raise HTTPException(status_code=500, detail="failed to generate thumbnail")
+
+    from fastapi.responses import FileResponse
+    return FileResponse(thumbnail_path, media_type="image/jpeg")
+
+
 @router.delete("/{asset_id}")
 async def delete_asset(request: Request, asset_id: str):
     root_dir: Path = request.app.state.root_dir
