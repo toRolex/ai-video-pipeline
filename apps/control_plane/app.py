@@ -281,6 +281,11 @@ async def _auto_tick(root_dir: Path):
                                 data["phase"] = next_phase(target)
                             except ValueError:
                                 data["phase"] = "completed"
+                        elif target in ("subtitle_generating", "video_rendering"):
+                            # Critical phases: do NOT auto-advance on failure
+                            # Stay in current phase and log the error
+                            print(f"[AUTO-TICK] {job_id}: {target} produced no artifacts, staying in phase")
+                            data["last_error"] = f"{target} failed to produce artifacts"
                         else:
                             # No artifacts produced - auto-advance (transitional phase or error)
                             try:
