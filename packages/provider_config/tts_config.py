@@ -135,6 +135,14 @@ class TTSConfigManager:
         "log_audio_duration": True,
     }
 
+    _FLAT_TO_NESTED = {
+        "director_character": "director.character",
+        "director_scene": "director.scene",
+        "director_guidance": "director.guidance",
+        "audio_tags_enabled": "audio_tags.enabled",
+        "audio_tags": "audio_tags.tags",
+    }
+
     def __init__(self, config_dir: str = "config"):
         self.config_dir = Path(config_dir)
         self.config_dir.mkdir(parents=True, exist_ok=True)
@@ -147,14 +155,44 @@ class TTSConfigManager:
         return global_config.with_defaults()
 
     def _load_config(self, project_id: str | None = None) -> TTSConfig:
+        if project_id is None:
+            return self._load_global_config()
+        return self._load_file_config(project_id)
+
+    def _load_global_config(self) -> TTSConfig:
+        from packages.provider_config.app_config import AppConfigManager
+        app_manager = AppConfigManager(config_dir=self.config_dir)
+        if app_manager.config_path.exists():
+            data = app_manager.get_tts_config()
+            return TTSConfig.from_dict(self._flatten_tts_config(data))
+        file_path = self._get_config_path(None)
+        if file_path.exists():
+            with open(file_path, encoding="utf-8") as f:
+                return TTSConfig.from_dict(json.load(f))
+        return TTSConfig()
+
+    def _load_file_config(self, project_id: str) -> TTSConfig:
         file_path = self._get_config_path(project_id)
         if file_path.exists():
             with open(file_path, encoding="utf-8") as f:
-                data = json.load(f)
-            return TTSConfig.from_dict(data)
+                return TTSConfig.from_dict(json.load(f))
         return TTSConfig()
 
     def save_config(self, config: TTSConfig, project_id: str | None = None) -> None:
+        if project_id is None:
+            self._save_global_config(config)
+        else:
+            self._save_file_config(config, project_id)
+
+    def _save_global_config(self, config: TTSConfig) -> None:
+        from packages.provider_config.app_config import AppConfigManager
+        app_manager = AppConfigManager(config_dir=self.config_dir)
+        for key, value in config.to_dict().items():
+            if value is None:
+                continue
+            app_manager.set_tts(self._FLAT_TO_NESTED.get(key, key), value)
+
+    def _save_file_config(self, config: TTSConfig, project_id: str) -> None:
         file_path = self._get_config_path(project_id)
         file_path.parent.mkdir(parents=True, exist_ok=True)
         with open(file_path, "w", encoding="utf-8") as f:
@@ -178,3 +216,20 @@ class TTSConfigManager:
                     result[key] = value
 
         return TTSConfig.from_dict(result)
+
+    @staticmethod
+    def _flatten_tts_config(data: dict[str, Any]) -> dict[str, Any]:
+        result = {}
+        for key, value in data.items():
+            if key == "director" and isinstance(value, dict):
+                result["director_character"] = value.get("character", "")
+                result["director_scene"] = value.get("scene", "")
+                result["director_guidance"] = value.get("guidance", "")
+            elif key == "audio_tags" and isinstance(value, dict):
+                result["audio_tags_enabled"] = value.get("enabled", False)
+                result["audio_tags"] = value.get("tags", "")
+            elif key == "provider":
+                continue
+            else:
+                result[key] = value
+        return result
