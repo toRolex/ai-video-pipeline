@@ -19,6 +19,7 @@ class CreateJobRequest(BaseModel):
     asset: str | None = None
     manual_script: str = ""
     uploaded_audio_path: str = ""
+    name: str = ""
 
 
 class ReviewAction(BaseModel):
@@ -40,6 +41,7 @@ def create_job(request: Request, project_id: str, payload: CreateJobRequest):
         job_id=job_id,
         project_id=project_id,
         product=payload.product,
+        name=payload.name or payload.product,
         phase="queued",
         review_status="none",
         manual_script=payload.manual_script,
@@ -49,6 +51,7 @@ def create_job(request: Request, project_id: str, payload: CreateJobRequest):
         "job_id": job_id,
         "project_id": project_id,
         "product": payload.product,
+        "name": payload.name or payload.product,
         "platforms": payload.platforms,
         "phase": "queued",
         "review_status": "none",
@@ -107,6 +110,21 @@ def delete_job(request: Request, job_id: str):
         raise HTTPException(status_code=404, detail="job not found")
     repo.delete_job(project_id, job_id)
     return {"status": "deleted", "job_id": job_id}
+
+
+class RenameJobRequest(BaseModel):
+    name: str
+
+
+@router.put("/api/jobs/{job_id}/rename")
+def rename_job(request: Request, job_id: str, payload: RenameJobRequest):
+    repo = FileStoreRepository(request.app.state.root_dir)
+    project_id = _find_job_project(repo, job_id)
+    if not project_id:
+        raise HTTPException(status_code=404, detail="job not found")
+    record = repo.load_job(project_id, job_id)
+    repo.save_job(project_id, record.model_copy(update={"name": payload.name}))
+    return {"job_id": job_id, "name": payload.name}
 
 
 @router.get("/api/jobs/{job_id}/logs")

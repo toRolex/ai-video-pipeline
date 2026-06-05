@@ -1,5 +1,6 @@
 import json
 import logging
+import random
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Request
@@ -102,6 +103,8 @@ def reject_review(job_id: str, payload: ReviewAction, request: Request) -> dict:
     
     if record.phase == "tts_review":
         reject_target = "tts_generating"
+    elif record.phase == "asset_review":
+        reject_target = "asset_retrieving"
     else:
         reject_target = "queued"
     
@@ -263,7 +266,7 @@ def reject_clip(job_id: str, payload: RejectClipRequest, request: Request) -> di
             candidates = repo.query_by_category(product, category_enum)
             candidates = [c for c in candidates if c.asset_id != rejected_asset_id and c.usage_count < 2]
             if candidates:
-                chosen = min(candidates, key=lambda c: c.usage_count)
+                chosen = random.choice(candidates)
                 clips[payload.clip_index] = {
                     "sentence": sentence,
                     "category": category,

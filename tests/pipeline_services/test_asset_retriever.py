@@ -20,8 +20,15 @@ def repo(tmp_path):
     yield r
 
 
-def test_retrieve_matches_keywords(repo):
-    retriever = AssetRetriever(repo)
+def test_retrieve_matches_with_classify(repo):
+    def classify_fn(sentence: str) -> str | None:
+        if "切" in sentence:
+            return "切配处理"
+        if "翻炒" in sentence or "烹熟" in sentence:
+            return "烹饪翻炒"
+        return None
+
+    retriever = AssetRetriever(repo, classify_fn=classify_fn)
     script = "荔枝菌切好以后下锅翻炒。充分烹熟后出锅装盘。"
     results = retriever.retrieve(script, "荔枝菌")
     assert len(results) >= 1

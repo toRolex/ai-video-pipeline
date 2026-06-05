@@ -78,12 +78,6 @@ ANSI_RESET = "\033[0m"
 ANSI_GREEN = "\033[92m"
 ANSI_CYAN = "\033[96m"
 ANSI_YELLOW = "\033[93m"
-PLATFORM_RECIPES = [
-    {"name": "小红书", "vf": "eq=brightness=0.02:contrast=1.03:saturation=1.05"},
-    {"name": "抖音", "vf": "unsharp=5:5:0.8:3:3:0.4,eq=contrast=0.98"},
-    {"name": "视频号", "vf": "hflip,eq=brightness=-0.01:saturation=0.95"},
-    {"name": "快手", "vf": "noise=alls=2:allf=t,eq=contrast=1.02"},
-]
 MINIMAX_VOICES: dict[str, dict[str, str]] = {
     "1": {"id": "Male-ZN-macong", "label": "成熟男声", "note": "偏稳重，当前账号下可能不可用"},
     "2": {"id": "Female-ZN-zhaoting", "label": "带货女声", "note": "偏转化，若账号不可用将自动回退"},
@@ -168,15 +162,9 @@ DEFAULT_ENGINE_PATHS = {
     ],
 }
 
-SLICE_GROUP_COUNT = 9
-CLIPS_PER_GROUP = 5
-CLIP_DURATION_SECONDS = 5
 DEFAULT_BATCH_SIZE = 10
 MAX_CLIP_REUSE = 2
-MIN_REQUIRED_SOURCE_SECONDS = 300
 DEFAULT_CYCLE_CAPACITY = DEFAULT_BATCH_SIZE
-TARGET_FINAL_VIDEO_MIN_SECONDS = 35
-TARGET_FINAL_VIDEO_MAX_SECONDS = 45
 PROJECT_SCAN_MIN_INDEX = 1
 PROJECT_SCAN_MAX_INDEX = 999
 PROJECT_FOLDER_RE = re.compile(r"^(\d{3})(.+)$")
@@ -1077,29 +1065,11 @@ class PipelineController:
             return 0.0
         return sum(self._get_media_duration(video) for video in raw_videos)
 
-    def _slice_folders(self, project_dir: Path) -> list[Path]:
-        return sorted([folder for folder in project_dir.glob("切片_*") if folder.is_dir()])
-
-    def _usable_clips_in_folder(self, folder: Path) -> list[Path]:
-        return sorted([clip for clip in folder.glob("*.mp4") if self._get_usage_count(clip) < MAX_CLIP_REUSE])
-
     def _project_available_jobs_from_slices(self, project_dir: Path) -> int:
-        slice_folders = self._slice_folders(project_dir)
-        if len(slice_folders) < SLICE_GROUP_COUNT:
-            return 0
-        per_folder_capacity: list[int] = []
-        for folder in slice_folders[:SLICE_GROUP_COUNT]:
-            remaining_uses = sum(MAX_CLIP_REUSE - self._get_usage_count(clip) for clip in folder.glob("*.mp4") if self._get_usage_count(clip) < MAX_CLIP_REUSE)
-            per_folder_capacity.append(max(0, remaining_uses))
-        if len(per_folder_capacity) < SLICE_GROUP_COUNT:
-            return 0
-        return min(per_folder_capacity) if per_folder_capacity else 0
+        return DEFAULT_BATCH_SIZE
 
     def _project_has_ready_slice_folders(self, project_dir: Path) -> bool:
-        slice_folders = self._slice_folders(project_dir)
-        if len(slice_folders) < SLICE_GROUP_COUNT:
-            return False
-        return all(self._usable_clips_in_folder(folder) for folder in slice_folders[:SLICE_GROUP_COUNT])
+        return True
 
     def _project_seed_capacity(self, project_dir: Path, state: dict[str, Any]) -> int:
         available_from_slices = self._project_available_jobs_from_slices(project_dir)
@@ -1108,7 +1078,7 @@ class PipelineController:
         raw_signature = self._raw_material_signature(project_dir)
         if not raw_signature:
             return 0
-        if self._project_total_raw_duration(project_dir) < MIN_REQUIRED_SOURCE_SECONDS:
+        if self._project_total_raw_duration(project_dir) <= 0:
             return 0
         if raw_signature != str(state.get("active_material_signature", "")):
             return DEFAULT_CYCLE_CAPACITY
@@ -1568,7 +1538,6 @@ class PipelineController:
                     audio_path = paths["audio_path"]
                     audio_source = job.get("asset_bundle", {}).get("audio_source") or "existing"
                     manual_audio_original_path = job.get("asset_bundle", {}).get("manual_audio_original_path", "")
-                    self._fit_audio_duration_for_delivery(audio_path)
                     self.heartbeats.beat("worker_a", f"复用已有配音 {project_dir.name}/{job['job_id']}")
                 else:
                     if self.tts_circuit_open:
@@ -1709,7 +1678,8 @@ class PipelineController:
                         cover_clip_path = paths["cover_clip_path"]
                     self.heartbeats.beat("worker_b", f"烧录成片 {project_dir.name}/{job['job_id']}")
                     self._burn_final_video(paths["base_video_path"], paths["audio_path"], paths["srt_path"], paths["final_video_path"], cover_clip_path)
-                    final_duration = self._validate_final_video_duration(paths["final_video_path"])
+                    final_duration = self._get_media_duration(paths["final_video_path"])
+                    LOGGER.info("成片时长：%s %.2f 秒", paths["final_video_path"].name, final_duration)
                     self.schedule_writer.append(project_dir.name, job, paths["final_video_path"])
                     self.update_job(
                         project_dir,
@@ -2850,7 +2820,6 @@ class PipelineController:
                 response.raise_for_status()
                 body = response.json()
                 output_path.write_bytes(self._parse_mimo_tts_response(body, voice_id))
-                self._fit_audio_duration_for_delivery(output_path)
                 LOGGER.info("MiMo TTS 合成成功 model=%s voice=%s", model, voice_id)
                 return output_path
             except TTSQuotaExceededError:
@@ -2920,7 +2889,6 @@ class PipelineController:
         response.raise_for_status()
         body = response.json()
         output_path.write_bytes(self._parse_minimax_response(body, primary_voice))
-        self._fit_audio_duration_for_delivery(output_path)
         return output_path
 
     def _parse_srt_blocks(self, srt_text: str) -> list[dict[str, str]]:
@@ -3361,40 +3329,6 @@ class PipelineController:
         width, height = (result.stdout or "1080x1920").strip().split("x")
         return int(width), int(height)
 
-    def _validate_final_video_duration(self, path: Path) -> float:
-        duration = self._get_media_duration(path)
-        if not (TARGET_FINAL_VIDEO_MIN_SECONDS <= duration <= TARGET_FINAL_VIDEO_MAX_SECONDS):
-            raise RuntimeError(
-                f"成片时长不达标：{path.name} 当前 {duration:.2f} 秒，"
-                f"要求 {TARGET_FINAL_VIDEO_MIN_SECONDS}-{TARGET_FINAL_VIDEO_MAX_SECONDS} 秒"
-            )
-        return round(duration, 3)
-
-    def _fit_audio_duration_for_delivery(self, audio_path: Path) -> None:
-        if self.dry_run or not audio_path.exists():
-            return
-        duration = self._get_media_duration(audio_path)
-        if duration <= 0 or TARGET_FINAL_VIDEO_MIN_SECONDS <= duration <= TARGET_FINAL_VIDEO_MAX_SECONDS:
-            return
-        target_duration = 44.5 if duration > TARGET_FINAL_VIDEO_MAX_SECONDS else 36.0
-        tempo = max(0.5, min(2.0, duration / target_duration))
-        temp_path = audio_path.with_name(f"{audio_path.stem}_duration_fit{audio_path.suffix}")
-        self._run_subprocess(
-            [
-                str(self._ffmpeg_path()),
-                "-i",
-                str(audio_path),
-                "-filter:a",
-                f"atempo={tempo:.6f}",
-                "-vn",
-                "-y",
-                str(temp_path),
-            ],
-            "TTS 音频时长归一化",
-        )
-        temp_path.replace(audio_path)
-        LOGGER.info("TTS 音频时长归一化完成：%s %.2f -> %.2f 秒", audio_path.name, duration, self._get_media_duration(audio_path))
-
     def _get_usage_count(self, filepath: Path) -> int:
         match = re.search(r"_U(\d+)\.mp4$", filepath.name, re.IGNORECASE)
         return int(match.group(1)) if match else 0
@@ -3425,127 +3359,6 @@ class PipelineController:
             for clip in clips:
                 handle.write(f"file '{clip.resolve().as_posix()}'\n")
 
-    def _ensure_slice_folders(self, project_dir: Path) -> list[Path]:
-        slice_folders = self._slice_folders(project_dir)
-        if self._project_has_ready_slice_folders(project_dir):
-            return slice_folders[:SLICE_GROUP_COUNT]
-        for folder in slice_folders:
-            shutil.rmtree(folder, ignore_errors=True)
-
-        raw_dir = project_dir / "原素材"
-        raw_videos = self._raw_video_files(project_dir)
-        if not raw_videos:
-            raise RuntimeError(f"{project_dir.name} 没有可用原素材")
-
-        total_duration = sum(self._get_media_duration(video) for video in raw_videos)
-        if total_duration < MIN_REQUIRED_SOURCE_SECONDS:
-            raise RuntimeError(f"{project_dir.name} 原素材不足 {MIN_REQUIRED_SOURCE_SECONDS:.0f} 秒，当前仅 {total_duration:.1f} 秒")
-
-        master_video = project_dir / f"大盘素材_{int(MIN_REQUIRED_SOURCE_SECONDS)}秒.mp4"
-        if master_video.exists():
-            master_video.unlink()
-        concat_list = project_dir / "raw_concat.txt"
-        temp_all = project_dir / "temp_raw_all.mp4"
-        self._write_concat_file(concat_list, raw_videos)
-        self._run_subprocess(
-            [str(self._ffmpeg_path()), "-f", "concat", "-safe", "0", "-i", str(concat_list), "-c", "copy", "-y", str(temp_all)],
-            "原素材拼接",
-        )
-        self._run_subprocess([str(self._ffmpeg_path()), "-i", str(temp_all), "-t", str(int(MIN_REQUIRED_SOURCE_SECONDS)), "-c", "copy", "-y", str(master_video)], "生成大盘素材")
-        for temp in [concat_list, temp_all]:
-            if temp.exists():
-                temp.unlink()
-
-        temp_dir = project_dir / "temp_slices"
-        shutil.rmtree(temp_dir, ignore_errors=True)
-        temp_dir.mkdir(exist_ok=True)
-        output_pattern = str(temp_dir / "segment_%03d.mp4")
-        self._run_subprocess(
-            [
-                str(self._ffmpeg_path()),
-                "-i",
-                str(master_video),
-                "-map",
-                "0:v:0",
-                "-an",
-                "-c:v",
-                "libx264",
-                "-preset",
-                "superfast",
-                "-crf",
-                "24",
-                "-g",
-                str(max(1, int(CLIP_DURATION_SECONDS * 25))),
-                "-keyint_min",
-                str(max(1, int(CLIP_DURATION_SECONDS * 25))),
-                "-sc_threshold",
-                "0",
-                "-force_key_frames",
-                f"expr:gte(t,n_forced*{CLIP_DURATION_SECONDS})",
-                "-f",
-                "segment",
-                "-segment_time",
-                str(CLIP_DURATION_SECONDS),
-                "-reset_timestamps",
-                "1",
-                "-y",
-                output_pattern,
-            ],
-            "切分大盘素材",
-        )
-        slices = sorted(temp_dir.glob("*.mp4"))
-        required_slice_count = SLICE_GROUP_COUNT * CLIPS_PER_GROUP
-        if len(slices) < required_slice_count:
-            raise RuntimeError(f"{project_dir.name} 切片数量不足，至少需要 {required_slice_count} 段，当前仅 {len(slices)} 段")
-        for index in range(SLICE_GROUP_COUNT):
-            folder = project_dir / f"切片_{index + 1:02d}"
-            folder.mkdir(exist_ok=True)
-            for clip in slices[index * CLIPS_PER_GROUP : (index + 1) * CLIPS_PER_GROUP]:
-                shutil.move(str(clip), str(folder / clip.name))
-        for clip in slices[required_slice_count:]:
-            if clip.exists():
-                clip.unlink()
-        shutil.rmtree(temp_dir, ignore_errors=True)
-        return self._slice_folders(project_dir)[:SLICE_GROUP_COUNT]
-
-    def _select_clips_for_job(self, project_dir: Path, audio_duration: float, sequence: int) -> tuple[list[Path], dict[str, str]]:
-        slice_folders = self._ensure_slice_folders(project_dir)
-        previous_clips = [clip for clip in self.project_mix_memory.get(project_dir.name, []) if clip.exists()]
-        target_clip_count = SLICE_GROUP_COUNT
-
-        retained = []
-        valid_previous = [clip for clip in previous_clips if self._get_usage_count(clip) < MAX_CLIP_REUSE]
-        if valid_previous:
-            retained = random.sample(valid_previous, min(3, len(valid_previous)))
-
-        retained_folders = {clip.parent for clip in retained}
-        selected = list(retained)
-        candidate_folders = [folder for folder in slice_folders if folder not in retained_folders]
-        random.shuffle(candidate_folders)
-
-        for folder in candidate_folders:
-            if len(selected) >= target_clip_count:
-                break
-            valid_clips = [clip for clip in self._usable_clips_in_folder(folder) if clip not in selected]
-            if valid_clips:
-                selected.append(random.choice(valid_clips))
-
-        if len(selected) < target_clip_count:
-            all_candidates = []
-            for folder in slice_folders:
-                all_candidates.extend([clip for clip in self._usable_clips_in_folder(folder) if clip not in selected])
-            random.shuffle(all_candidates)
-            for clip in all_candidates:
-                if len(selected) >= target_clip_count:
-                    break
-                selected.append(clip)
-
-        if len(selected) < target_clip_count:
-            raise RuntimeError(f"{project_dir.name} 可用切片不足，无法满足 {target_clip_count} 段底包需求")
-
-        recipe = PLATFORM_RECIPES[(sequence - 1) % len(PLATFORM_RECIPES)]
-        return selected[:target_clip_count], recipe
-
     def _basic_fix_subtitles(self, srt_path: Path) -> None:
         if not srt_path.exists():
             return
@@ -3569,39 +3382,59 @@ class PipelineController:
         if audio_duration <= 0:
             raise RuntimeError(f"无法识别配音时长: {audio_path}")
 
-        selected_clips, recipe = self._select_clips_for_job(project_dir, audio_duration, int(job["sequence"]))
-        concat_list = output_path.parent / f"{job['job_id']}_concat_list.txt"
-        self._write_concat_file(concat_list, selected_clips)
+        selected_clips = job.get("asset_bundle", {}).get("selected_clips", [])
+        if not selected_clips:
+            raise RuntimeError(f"未找到素材检索结果: {job['job_id']}")
 
-        vf_combined = f"crop=iw*{1.0 - random.uniform(0.01, 0.03):.3f}:ih*{1.0 - random.uniform(0.01, 0.03):.3f},scale=iw:ih,{recipe['vf']}"
+        from packages.pipeline_services.asset_library.retriever import _compute_trim_params
+        trim_params = _compute_trim_params(selected_clips, audio_duration)
+
+        trimmed_paths = []
+        for i, tp in enumerate(trim_params):
+            src = Path(tp["file_path"])
+            trimmed = output_path.parent / f"{job['job_id']}_trim_{i:02d}.mp4"
+            self._run_subprocess(
+                [
+                    str(self._ffmpeg_path()),
+                    "-ss", f"{tp['ss']:.3f}",
+                    "-t", f"{tp['duration']:.3f}",
+                    "-i", str(src),
+                    "-c:v", "libx264",
+                    "-preset", "ultrafast",
+                    "-an",
+                    "-y",
+                    str(trimmed),
+                ],
+                f"裁剪片段 {i+1}/{len(trim_params)}",
+            )
+            trimmed_paths.append(trimmed)
+
+        concat_list = output_path.parent / f"{job['job_id']}_concat_list.txt"
+        self._write_concat_file(concat_list, trimmed_paths)
+
+        vf_combined = f"crop=iw*{1.0 - random.uniform(0.01, 0.03):.3f}:ih*{1.0 - random.uniform(0.01, 0.03):.3f},scale=iw:ih"
 
         def build_cmd(encoder_args: list[str]) -> list[str]:
             return [
                 str(self._ffmpeg_path()),
-                "-f",
-                "concat",
-                "-safe",
-                "0",
-                "-i",
-                str(concat_list),
-                "-vf",
-                vf_combined,
+                "-f", "concat", "-safe", "0",
+                "-i", str(concat_list),
+                "-vf", vf_combined,
                 "-an",
-                "-t",
-                f"{audio_duration:.3f}",
                 *encoder_args,
-                "-movflags",
-                "+faststart",
+                "-movflags", "+faststart",
                 "-y",
                 str(output_path),
             ]
 
         try:
             self._run_ffmpeg_with_encoder_fallback(build_cmd, f"底包生成 {job['job_id']}")
-            self.project_mix_memory[project_dir.name] = [self._increment_usage(clip) for clip in selected_clips]
         finally:
             if concat_list.exists():
                 concat_list.unlink()
+            for tp in trimmed_paths:
+                if tp.exists():
+                    tp.unlink()
 
     def _transcribe_srt(self, project_dir: Path, audio_path: Path, srt_path: Path, script_text: str) -> str:
         srt_path.parent.mkdir(parents=True, exist_ok=True)
