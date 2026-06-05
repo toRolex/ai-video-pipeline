@@ -274,11 +274,19 @@ export const api = {
   getTTSVoices: () =>
     request<{ preset_voices: Array<{ id: string; label: string; note: string }> }>("/api/tts/voices"),
 
-  previewTTS: (requestBody: { text: string; model?: string; voice?: string; style_prompt?: string; voice_design_prompt?: string }) =>
-    request<Record<string, unknown>>("/api/tts/preview", {
+  previewTTS: async (requestBody: { text: string; model?: string; voice?: string; style_prompt?: string; voice_design_prompt?: string }) => {
+    const res = await fetch("/api/tts/preview", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody),
-    }),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`${res.status}: ${text}`);
+    }
+    const blob = await res.blob();
+    return URL.createObjectURL(blob);
+  },
 
   getTTSMetrics: (projectId?: string, range?: string) => {
     const qs = new URLSearchParams();
