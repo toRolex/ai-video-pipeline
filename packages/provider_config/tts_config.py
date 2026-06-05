@@ -14,7 +14,20 @@ class TTSConfig:
     randomize_voice: bool | None = None
     random_voices: list[str] | None = None
     voice_design_prompt: str | None = None
-    style_prompt: str | None = None
+    
+    # 风格控制 - 自然语言控制
+    style_control_mode: str | None = None  # "simple" 或 "director"
+    style_prompt: str | None = None  # 简单模式的风格描述
+    
+    # 导演模式
+    director_character: str | None = None  # 角色描述
+    director_scene: str | None = None  # 场景描述
+    director_guidance: str | None = None  # 指导描述
+    
+    # 标签控制
+    audio_tags_enabled: bool | None = None  # 是否启用标签控制
+    audio_tags: str | None = None  # 音频标签，如 "(温柔)[笑声]文本内容[叹气]"
+    
     audio_format: str | None = None
     sample_rate: int | None = None
     bitrate: int | None = None
@@ -31,7 +44,13 @@ class TTSConfig:
             "randomize_voice": self.randomize_voice,
             "random_voices": self.random_voices,
             "voice_design_prompt": self.voice_design_prompt,
+            "style_control_mode": self.style_control_mode,
             "style_prompt": self.style_prompt,
+            "director_character": self.director_character,
+            "director_scene": self.director_scene,
+            "director_guidance": self.director_guidance,
+            "audio_tags_enabled": self.audio_tags_enabled,
+            "audio_tags": self.audio_tags,
             "audio_format": self.audio_format,
             "sample_rate": self.sample_rate,
             "bitrate": self.bitrate,
@@ -50,7 +69,13 @@ class TTSConfig:
             randomize_voice=data.get("randomize_voice"),
             random_voices=data.get("random_voices"),
             voice_design_prompt=data.get("voice_design_prompt"),
+            style_control_mode=data.get("style_control_mode"),
             style_prompt=data.get("style_prompt"),
+            director_character=data.get("director_character"),
+            director_scene=data.get("director_scene"),
+            director_guidance=data.get("director_guidance"),
+            audio_tags_enabled=data.get("audio_tags_enabled"),
+            audio_tags=data.get("audio_tags"),
             audio_format=data.get("audio_format"),
             sample_rate=data.get("sample_rate"),
             bitrate=data.get("bitrate"),
@@ -69,7 +94,13 @@ class TTSConfig:
             randomize_voice=self.randomize_voice if self.randomize_voice is not None else defaults["randomize_voice"],
             random_voices=self.random_voices if self.random_voices is not None else defaults["random_voices"],
             voice_design_prompt=self.voice_design_prompt if self.voice_design_prompt is not None else defaults["voice_design_prompt"],
+            style_control_mode=self.style_control_mode if self.style_control_mode is not None else defaults["style_control_mode"],
             style_prompt=self.style_prompt if self.style_prompt is not None else defaults["style_prompt"],
+            director_character=self.director_character if self.director_character is not None else defaults["director_character"],
+            director_scene=self.director_scene if self.director_scene is not None else defaults["director_scene"],
+            director_guidance=self.director_guidance if self.director_guidance is not None else defaults["director_guidance"],
+            audio_tags_enabled=self.audio_tags_enabled if self.audio_tags_enabled is not None else defaults["audio_tags_enabled"],
+            audio_tags=self.audio_tags if self.audio_tags is not None else defaults["audio_tags"],
             audio_format=self.audio_format if self.audio_format is not None else defaults["audio_format"],
             sample_rate=self.sample_rate if self.sample_rate is not None else defaults["sample_rate"],
             bitrate=self.bitrate if self.bitrate is not None else defaults["bitrate"],
@@ -88,7 +119,13 @@ class TTSConfigManager:
         "randomize_voice": True,
         "random_voices": ["Mia", "Dean"],
         "voice_design_prompt": "",
+        "style_control_mode": "simple",
         "style_prompt": "自然 清晰 适合短视频带货口播",
+        "director_character": "",
+        "director_scene": "",
+        "director_guidance": "",
+        "audio_tags_enabled": False,
+        "audio_tags": "",
         "audio_format": "mp3",
         "sample_rate": None,
         "bitrate": None,

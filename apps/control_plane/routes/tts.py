@@ -22,7 +22,13 @@ class TTSConfigRequest(BaseModel):
     randomize_voice: bool | None = None
     random_voices: list[str] | None = None
     voice_design_prompt: str | None = None
+    style_control_mode: str | None = None
     style_prompt: str | None = None
+    director_character: str | None = None
+    director_scene: str | None = None
+    director_guidance: str | None = None
+    audio_tags_enabled: bool | None = None
+    audio_tags: str | None = None
     audio_format: str | None = None
     sample_rate: int | None = None
     bitrate: int | None = None
@@ -36,7 +42,13 @@ class TTSConfigResponse(BaseModel):
     randomize_voice: bool
     random_voices: list[str]
     voice_design_prompt: str
+    style_control_mode: str
     style_prompt: str
+    director_character: str
+    director_scene: str
+    director_guidance: str
+    audio_tags_enabled: bool
+    audio_tags: str
     audio_format: str
     sample_rate: int | None
     bitrate: int | None

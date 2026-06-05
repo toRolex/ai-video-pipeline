@@ -8,7 +8,13 @@ interface TTSConfig {
   randomize_voice: boolean;
   random_voices: string[];
   voice_design_prompt: string;
+  style_control_mode: string;
   style_prompt: string;
+  director_character: string;
+  director_scene: string;
+  director_guidance: string;
+  audio_tags_enabled: boolean;
+  audio_tags: string;
   audio_format: string;
   sample_rate: number | null;
   bitrate: number | null;
@@ -26,6 +32,31 @@ const STYLE_PRESETS = [
   { label: "热情推荐", value: "活泼热情，语速稍快，带着发现美食的惊喜感" },
   { label: "沉稳讲解", value: "沉稳专业，语速适中，适合知识讲解" },
   { label: "美食探店", value: "热情洋溢，充满食欲，让人垂涎欲滴" },
+  { label: "温柔亲切", value: "温柔亲切，语速适中，像朋友聊天" },
+  { label: "活力青春", value: "活力四射，语速偏快，充满青春气息" },
+];
+
+const STYLE_TAGS = [
+  { label: "开心", value: "(开心)" },
+  { label: "悲伤", value: "(悲伤)" },
+  { label: "温柔", value: "(温柔)" },
+  { label: "活泼", value: "(活泼)" },
+  { label: "严肃", value: "(严肃)" },
+  { label: "磁性", value: "(磁性)" },
+  { label: "甜美", value: "(甜美)" },
+  { label: "东北话", value: "(东北话)" },
+  { label: "四川话", value: "(四川话)" },
+];
+
+const AUDIO_TAGS = [
+  { label: "笑声", value: "[笑声]" },
+  { label: "叹气", value: "[叹气]" },
+  { label: "停顿", value: "[停顿]" },
+  { label: "深呼吸", value: "[深呼吸]" },
+  { label: "紧张", value: "[紧张]" },
+  { label: "激动", value: "[激动]" },
+  { label: "疲惫", value: "[疲惫]" },
+  { label: "撒娇", value: "[撒娇]" },
 ];
 
 export default function TTSConfigPage() {
@@ -227,16 +258,100 @@ export default function TTSConfigPage() {
 
           <section className="bg-white rounded-xl border border-gray-200 p-6">
             <h2 className="text-lg font-semibold mb-4">风格控制</h2>
+            
+            {/* 风格控制模式选择 */}
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">风格指令</label>
-              <textarea
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg resize-none"
-                rows={3}
-                value={config.style_prompt}
-                onChange={(e) => setConfig({ ...config, style_prompt: e.target.value })}
-              />
+              <label className="block text-sm font-medium text-gray-700 mb-2">控制模式</label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="style_control_mode"
+                    value="simple"
+                    checked={config.style_control_mode === "simple"}
+                    onChange={(e) => setConfig({ ...config, style_control_mode: e.target.value })}
+                    className="rounded"
+                  />
+                  <span className="text-sm">简单模式</span>
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="style_control_mode"
+                    value="director"
+                    checked={config.style_control_mode === "director"}
+                    onChange={(e) => setConfig({ ...config, style_control_mode: e.target.value })}
+                    className="rounded"
+                  />
+                  <span className="text-sm">导演模式</span>
+                </label>
+              </div>
             </div>
-            <div>
+
+            {/* 简单模式 */}
+            {config.style_control_mode === "simple" && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">风格指令</label>
+                <textarea
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg resize-none"
+                  rows={3}
+                  placeholder="用自然语言描述想要的语音风格..."
+                  value={config.style_prompt}
+                  onChange={(e) => setConfig({ ...config, style_prompt: e.target.value })}
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  示例：用轻快上扬的语调向领导报喜，语速稍快，带着查到成绩后压抑不住的激动与小骄傲
+                </p>
+              </div>
+            )}
+
+            {/* 导演模式 */}
+            {config.style_control_mode === "director" && (
+              <div className="space-y-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">【角色】人物描述</label>
+                  <textarea
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg resize-none"
+                    rows={2}
+                    placeholder="描述角色特征：年龄、性别、性格、音色特点..."
+                    value={config.director_character}
+                    onChange={(e) => setConfig({ ...config, director_character: e.target.value })}
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    示例：25岁活泼少女，声线清脆明亮，语尾带一点上扬
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">【场景】情境描述</label>
+                  <textarea
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg resize-none"
+                    rows={2}
+                    placeholder="描述场景背景：场合、氛围、对象..."
+                    value={config.director_scene}
+                    onChange={(e) => setConfig({ ...config, director_scene: e.target.value })}
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    示例：在美食直播间，面对观众介绍刚发现的宝藏小店
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">【指导】演绎要领</label>
+                  <textarea
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg resize-none"
+                    rows={3}
+                    placeholder="详细指导：语速、气息、停顿、重音、情绪起伏..."
+                    value={config.director_guidance}
+                    onChange={(e) => setConfig({ ...config, director_guidance: e.target.value })}
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    示例：语速偏快，咬字轻巧，在强调食材时微微加重语气，整体保持兴奋但不做作
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* 预设风格模板 */}
+            <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">预设风格模板</label>
               <div className="flex flex-wrap gap-2">
                 {STYLE_PRESETS.map(preset => (
@@ -247,12 +362,87 @@ export default function TTSConfigPage() {
                         ? "bg-blue-500 text-white"
                         : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                     }`}
-                    onClick={() => setConfig({ ...config, style_prompt: preset.value })}
+                    onClick={() => setConfig({ ...config, style_prompt: preset.value, style_control_mode: "simple" })}
                   >
                     {preset.label}
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* 标签控制 */}
+            <div className="border-t pt-4">
+              <div className="flex items-center gap-3 mb-4">
+                <input
+                  type="checkbox"
+                  id="audio_tags_enabled"
+                  checked={config.audio_tags_enabled}
+                  onChange={(e) => setConfig({ ...config, audio_tags_enabled: e.target.checked })}
+                  className="rounded"
+                />
+                <label htmlFor="audio_tags_enabled" className="text-sm font-medium text-gray-700">
+                  启用标签控制
+                </label>
+                <span className="text-xs text-gray-500">
+                  在文本前添加风格标签和音频标签
+                </span>
+              </div>
+
+              {config.audio_tags_enabled && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">风格标签</label>
+                    <div className="flex flex-wrap gap-2">
+                      {STYLE_TAGS.map(tag => (
+                        <button
+                          key={tag.label}
+                          className="px-3 py-1 text-sm bg-purple-100 text-purple-700 rounded-full hover:bg-purple-200"
+                          onClick={() => {
+                            const currentTags = config.audio_tags || "";
+                            if (!currentTags.includes(tag.value)) {
+                              setConfig({ ...config, audio_tags: tag.value + currentTags });
+                            }
+                          }}
+                        >
+                          {tag.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">音频标签</label>
+                    <div className="flex flex-wrap gap-2">
+                      {AUDIO_TAGS.map(tag => (
+                        <button
+                          key={tag.label}
+                          className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded-full hover:bg-green-200"
+                          onClick={() => {
+                            const currentTags = config.audio_tags || "";
+                            setConfig({ ...config, audio_tags: currentTags + tag.value });
+                          }}
+                        >
+                          {tag.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">标签预览</label>
+                    <input
+                      type="text"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                      placeholder="(风格标签)文本内容[音频标签]"
+                      value={config.audio_tags}
+                      onChange={(e) => setConfig({ ...config, audio_tags: e.target.value })}
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      格式：(风格)开头，[标签]可插入文本任意位置
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </section>
 
