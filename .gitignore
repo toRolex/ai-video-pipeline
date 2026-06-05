@@ -32,4 +32,3 @@ frontend/dist/
 frontend/node_modules/
 frontend/package-lock.json
 .gstack/
-config/tts_config*.json
