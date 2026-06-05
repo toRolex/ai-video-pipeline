@@ -2865,7 +2865,10 @@ class PipelineController:
     def validate_tts_connection(self) -> dict[str, Any]:
         if self.dry_run:
             return {"ok": True, "mode": "dry_run"}
-        output_path = self.root_dir / "logs" / f"tts_probe_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{os.getenv('MIMO_AUDIO_FORMAT', 'mp3')}"
+        app_config = AppConfigManager()
+        tts_config = app_config.get_tts_config()
+        audio_format = tts_config.get("audio_format", "mp3")
+        output_path = self.root_dir / "logs" / f"tts_probe_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{audio_format}"
         audio_path = self._synthesize_tts("连通测试，滋元堂短视频配音链路正常。", output_path)
         duration = 0.0
         try:
@@ -2873,10 +2876,11 @@ class PipelineController:
                 duration = self._get_media_duration(audio_path)
         except Exception as exc:  # noqa: BLE001
             LOGGER.warning("TTS 探针音频已生成，但 ffprobe 时长检查失败：%s", exc)
+        model = tts_config.get("model", "mimo-v2.5-tts") if self._tts_provider() == "mimo" else os.getenv("MINIMAX_TTS_MODEL", ENV_DEFAULTS["MINIMAX_TTS_MODEL"])
         return {
             "ok": True,
             "provider": self._tts_provider(),
-            "model": os.getenv("MIMO_TTS_MODEL", ENV_DEFAULTS["MIMO_TTS_MODEL"]) if self._tts_provider() == "mimo" else os.getenv("MINIMAX_TTS_MODEL", ENV_DEFAULTS["MINIMAX_TTS_MODEL"]),
+            "model": model,
             "audio_path": str(audio_path),
             "duration": duration,
         }
