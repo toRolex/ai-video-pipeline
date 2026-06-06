@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import random
 from typing import Any
 
 
@@ -32,7 +33,10 @@ class MiMoTTSProvider:
     ) -> dict[str, Any]:
         if config.model == "mimo-v2.5-tts-voicedesign":
             return self._build_voicedesign_request(text, config)
-        return self._build_preset_request(text, config, voice_id)
+        voice = voice_id or config.voice
+        if config.randomize_voice and config.random_voices:
+            voice = random.choice(config.random_voices)
+        return self._build_preset_request(text, config, voice)
 
     def _build_style_instruction(self, config: Any) -> str:
         # 导演模式

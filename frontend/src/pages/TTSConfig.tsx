@@ -101,10 +101,13 @@ export default function TTSConfigPage() {
     setLoading(true);
     setPreviewError(null);
     try {
+      const voice = config.randomize_voice && config.random_voices.length > 0
+        ? config.random_voices[Math.floor(Math.random() * config.random_voices.length)]
+        : config.voice;
       const result = await api.previewTTS({
         text: previewText,
         model: config.model,
-        voice: config.voice,
+        voice,
         style_prompt: config.style_prompt,
         voice_design_prompt: config.voice_design_prompt,
       });
