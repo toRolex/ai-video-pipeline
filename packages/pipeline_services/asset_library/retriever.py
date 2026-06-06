@@ -104,11 +104,12 @@ def _compute_trim_params(clips: list[dict], audio_duration: float) -> list[dict]
         ss = random.uniform(0, 1)
         duration = per_clip
         
-        if clip_duration > 0 and ss + duration > clip_duration:
-            ss = max(0, clip_duration - duration)
+        if clip_duration > 0:
+            if ss + duration > clip_duration:
+                ss = max(0, clip_duration - duration)
             if ss < 0:
                 ss = 0
-                duration = clip_duration
+            duration = min(duration, max(0.1, clip_duration - ss))
         
         params.append({
             **clip,
