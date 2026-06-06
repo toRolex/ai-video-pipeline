@@ -24,7 +24,7 @@
     },
     "audio_tags": {
       "enabled": true,
-      "tags": "(温柔)[笑声]"
+      "tags": "(温柔)"
     },
     "audio_format": "wav",
     "sample_rate": 44100,
