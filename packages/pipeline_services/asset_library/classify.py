@@ -50,40 +50,42 @@ def create_classify_fn(
             "max_tokens": 200,
         }
         data = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(
-            api_url,
-            data=data,
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            },
-        )
-        try:
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                body = json.loads(resp.read().decode("utf-8"))
-            content = body["choices"][0]["message"]["content"]
-            logger.debug("LLM 返回内容: %s", content)
-            
-            import re
-            
-            json_match = re.search(r'\{[^}]*"category"\s*:\s*"[^"]*"\s*\}', content)
-            if not json_match:
-                json_match = re.search(r'\{[^}]+\}', content)
-            
-            if json_match:
-                try:
-                    parsed = json.loads(json_match.group())
-                    cat_name = parsed.get("category", "")
-                    if cat_name in CATEGORY_NAMES:
-                        return cat_name
-                    logger.warning("LLM 返回无效分类名: %s", cat_name)
-                except json.JSONDecodeError as e:
-                    logger.warning("JSON 解析失败: %s, 原始内容: %s", e, json_match.group())
-            else:
-                logger.warning("LLM 返回中未找到 JSON: %s", content[:200])
-            return None
-        except Exception as exc:
-            logger.warning("LLM 句子分类失败: %s", exc)
-            return None
+        
+        for attempt in range(3):
+            req = urllib.request.Request(
+                api_url,
+                data=data,
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                },
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=15) as resp:
+                    body = json.loads(resp.read().decode("utf-8"))
+                content = body["choices"][0]["message"]["content"]
+                logger.debug("LLM 返回内容 (attempt %d): %s", attempt + 1, content)
+                
+                import re
+                
+                json_match = re.search(r'\{[^}]*"category"\s*:\s*"[^"]*"\s*\}', content)
+                if not json_match:
+                    json_match = re.search(r'\{[^}]+\}', content)
+                
+                if json_match:
+                    try:
+                        parsed = json.loads(json_match.group())
+                        cat_name = parsed.get("category", "")
+                        if cat_name in CATEGORY_NAMES:
+                            return cat_name
+                        logger.warning("LLM 返回无效分类名 (attempt %d): %s", attempt + 1, cat_name)
+                    except json.JSONDecodeError as e:
+                        logger.warning("JSON 解析失败 (attempt %d): %s, 原始内容: %s", attempt + 1, e, json_match.group())
+                else:
+                    logger.warning("LLM 返回中未找到 JSON (attempt %d): %s", attempt + 1, content[:200])
+            except Exception as exc:
+                logger.warning("LLM 句子分类失败 (attempt %d): %s", attempt + 1, exc)
+        
+        return None
 
     return classify_sentence
