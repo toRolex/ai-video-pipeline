@@ -130,7 +130,9 @@ export default function SmartAssetLibrary({ projectId: _projectId }: Props) {
             clearInterval(pollIntervalRef.current);
             pollIntervalRef.current = null;
           }
-          console.error("Index failed:", status.error);
+          const errorMsg = status.error || "未知错误";
+          console.error("Index failed:", errorMsg);
+          alert(`素材入库失败：${errorMsg}\n\n请检查服务器终端日志获取详细信息。`);
         }
       } catch (error) {
         console.error("Poll failed:", error);
@@ -157,6 +159,14 @@ export default function SmartAssetLibrary({ projectId: _projectId }: Props) {
         }
 
         const result = await api.indexAssetsSharedAsync();
+
+        // 如果没有新视频需要索引（全部已索引过），直接刷新列表
+        if (!result.task_id) {
+          await loadAssets();
+          setIndexStatus("idle");
+          return;
+        }
+
         setIndexTaskId(result.task_id);
 
         pollIntervalRef.current = setInterval(() => {

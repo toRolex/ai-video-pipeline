@@ -28,6 +28,9 @@ from packages.pipeline_services.asset_library.thumbnail import ThumbnailGenerato
 
 router = APIRouter(prefix="/api/assets", tags=["api-assets"])
 
+# 存储后台任务引用，防止被垃圾回收
+_background_tasks: set[asyncio.Task] = set()
+
 
 def _sanitize_filename(filename: str) -> str:
     return Path(filename).name
@@ -150,7 +153,10 @@ async def index_assets(request: Request, async_mode: bool = Query(True)):
 
     if async_mode:
         task = index_task_manager.create_task(len(new_videos))
-        asyncio.create_task(_run_index_task(task.task_id, root_dir, new_videos, db_path))
+        print(f"[INDEX] 创建异步任务: {task.task_id}, 待处理 {len(new_videos)} 个视频")
+        bg_task = asyncio.create_task(_run_index_task(task.task_id, root_dir, new_videos, db_path))
+        _background_tasks.add(bg_task)
+        bg_task.add_done_callback(_background_tasks.discard)
         return {"task_id": task.task_id, "total_videos": len(new_videos)}
 
     repository = AssetRepository(db_path)
@@ -191,6 +197,7 @@ async def _run_index_task(task_id: str, root_dir: Path, videos: list[Path], db_p
 
     task.status = TaskStatus.RUNNING
     index_task_manager.add_log(task_id, f"开始处理 {len(videos)} 个视频")
+    print(f"[INDEX] 任务开始: {task_id}, 共 {len(videos)} 个视频")
 
     try:
         repository = AssetRepository(db_path)
@@ -229,10 +236,12 @@ async def _run_index_task(task_id: str, root_dir: Path, videos: list[Path], db_p
         task.current_step = "done"
         task.completed_at = __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat()
         index_task_manager.add_log(task_id, "索引完成")
+        print(f"[INDEX] 任务完成: {task_id}, 共处理 {len(videos)} 个视频")
     except Exception as e:
         task.status = TaskStatus.FAILED
         task.error = str(e)
         index_task_manager.add_log(task_id, f"错误: {e}")
+        print(f"[INDEX ERROR] 任务失败: {task_id}, 错误: {type(e).__name__}: {e}")
 
 
 @router.get("/index/{task_id}/status")
