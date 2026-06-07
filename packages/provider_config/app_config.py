@@ -40,7 +40,7 @@ DEFAULTS: dict[str, Any] = {
         "log_audio_duration": True,
     },
     "vision": {
-        "provider": "openai",
+        "provider": "xiaomi",
         "model": "mimo-v2.5",
     },
     "media": {
@@ -94,9 +94,6 @@ class AppConfigManager:
         "deepseek": "DEEPSEEK_API_KEY",
         "kimi": "KIMI_API_KEY",
         "minimax": "MINIMAX_API_KEY",
-        "xiaomi": "XIAOMI_VISION_API_KEY",
-        "openai": "VISION_API_KEY",
-        "claude": "VISION_API_KEY",
     }
 
     API_BASE_URL_ENV_MAP = {
@@ -104,17 +101,24 @@ class AppConfigManager:
         "deepseek": "DEEPSEEK_API_URL",
         "kimi": "KIMI_API_URL",
         "minimax": "MINIMAX_TTS_URL",
+    }
+
+    VISION_API_KEY_ENV_MAP = {
+        "xiaomi": "XIAOMI_VISION_API_KEY",
+        "openai": "VISION_API_KEY",
+        "claude": "VISION_API_KEY",
+    }
+
+    VISION_ENDPOINT_ENV_MAP = {
         "xiaomi": "XIAOMI_VISION_API_URL",
         "openai": "VISION_API_URL",
         "claude": "VISION_API_URL",
     }
 
-    MODEL_ENV_MAP = {
+    VISION_MODEL_ENV_MAP = {
         "xiaomi": "XIAOMI_VISION_MODEL",
         "openai": "VISION_MODEL",
         "claude": "VISION_MODEL",
-        "deepseek": "DEEPSEEK_MODEL",
-        "kimi": "KIMI_MODEL",
     }
 
     def __init__(self, config_dir: str | Path = "config") -> None:
@@ -165,20 +169,45 @@ class AppConfigManager:
         env_key = self.API_BASE_URL_ENV_MAP.get(provider, "")
         return os.getenv(env_key, "").strip().rstrip("/")
 
-    def get_model(self, provider: str, fallback: str = "") -> str:
+    def get_llm_api_key(self) -> str:
         import os
-        env_key = self.MODEL_ENV_MAP.get(provider, "")
-        return os.getenv(env_key, fallback).strip()
+        provider = self.get_llm_config().get("provider", "deepseek")
+        env_key = self.API_KEY_ENV_MAP.get(provider, "")
+        return os.getenv(env_key, "").strip().strip('"').strip("'")
+
+    def get_llm_endpoint(self) -> str:
+        import os
+        provider = self.get_llm_config().get("provider", "deepseek")
+        env_key = self.API_BASE_URL_ENV_MAP.get(provider, "")
+        return os.getenv(env_key, "").strip().rstrip("/")
 
     def get_vision_config(self) -> dict[str, Any]:
         config = self._load()
         vision = config.get("vision", {})
         defaults = DEFAULTS["vision"]
-        merged = _deep_merge(defaults, vision)
-        provider = merged.get("provider", "openai")
-        return {
-            "provider": provider,
-            "api_key": self.get_api_key(provider),
-            "endpoint": self.get_api_base_url(provider),
-            "model": self.get_model(provider, merged.get("model", "")),
-        }
+        return _deep_merge(defaults, vision)
+
+    def set_vision(self, key: str, value: Any) -> None:
+        config = self._load()
+        if "vision" not in config:
+            config["vision"] = {}
+        _set_nested(config["vision"], key, value)
+        self._save(config)
+
+    def get_vision_api_key(self) -> str:
+        import os
+        provider = self.get_vision_config().get("provider", "xiaomi")
+        env_key = self.VISION_API_KEY_ENV_MAP.get(provider, "VISION_API_KEY")
+        return os.getenv(env_key, "").strip().strip('"').strip("'")
+
+    def get_vision_endpoint(self) -> str:
+        import os
+        provider = self.get_vision_config().get("provider", "xiaomi")
+        env_key = self.VISION_ENDPOINT_ENV_MAP.get(provider, "VISION_API_URL")
+        return os.getenv(env_key, "").strip().rstrip("/")
+
+    def get_vision_model(self) -> str:
+        import os
+        provider = self.get_vision_config().get("provider", "xiaomi")
+        env_key = self.VISION_MODEL_ENV_MAP.get(provider, "VISION_MODEL")
+        return os.getenv(env_key, "").strip()

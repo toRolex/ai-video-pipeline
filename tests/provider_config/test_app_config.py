@@ -138,3 +138,70 @@ def test_get_api_base_url_from_env(monkeypatch) -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         manager = AppConfigManager(config_dir=tmpdir)
         assert manager.get_api_base_url("mimo") == "https://custom.api.com/v1"
+
+
+# --- Vision tests ---
+
+def test_get_vision_config_default() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        manager = AppConfigManager(config_dir=tmpdir)
+        config = manager.get_vision_config()
+        assert config["provider"] == "xiaomi"
+        assert config["model"] == "mimo-v2.5"
+
+
+def test_get_vision_api_key_from_env(monkeypatch) -> None:
+    monkeypatch.setenv("XIAOMI_VISION_API_KEY", "test-vision-key")
+    with tempfile.TemporaryDirectory() as tmpdir:
+        manager = AppConfigManager(config_dir=tmpdir)
+        assert manager.get_vision_api_key() == "test-vision-key"
+
+
+def test_get_vision_endpoint_from_env(monkeypatch) -> None:
+    monkeypatch.setenv("XIAOMI_VISION_API_URL", "https://api.example.com/v1/chat/completions")
+    with tempfile.TemporaryDirectory() as tmpdir:
+        manager = AppConfigManager(config_dir=tmpdir)
+        assert manager.get_vision_endpoint() == "https://api.example.com/v1/chat/completions"
+
+
+def test_get_vision_model_from_env(monkeypatch) -> None:
+    monkeypatch.setenv("XIAOMI_VISION_MODEL", "mimo-v2-omni")
+    with tempfile.TemporaryDirectory() as tmpdir:
+        manager = AppConfigManager(config_dir=tmpdir)
+        assert manager.get_vision_model() == "mimo-v2-omni"
+
+
+def test_set_vision_model() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        manager = AppConfigManager(config_dir=tmpdir)
+        manager.set_vision("model", "mimo-v2-omni")
+        config = manager.get_vision_config()
+        assert config["model"] == "mimo-v2-omni"
+
+
+def test_vision_api_key_empty_when_not_set() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        manager = AppConfigManager(config_dir=tmpdir)
+        assert manager.get_vision_api_key() == ""
+
+
+# --- LLM api_key/endpoint tests ---
+
+def test_get_llm_api_key_from_env(monkeypatch) -> None:
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "sk-test-deepseek")
+    with tempfile.TemporaryDirectory() as tmpdir:
+        manager = AppConfigManager(config_dir=tmpdir)
+        assert manager.get_llm_api_key() == "sk-test-deepseek"
+
+
+def test_get_llm_endpoint_from_env(monkeypatch) -> None:
+    monkeypatch.setenv("DEEPSEEK_API_URL", "https://api.deepseek.com/chat/completions")
+    with tempfile.TemporaryDirectory() as tmpdir:
+        manager = AppConfigManager(config_dir=tmpdir)
+        assert manager.get_llm_endpoint() == "https://api.deepseek.com/chat/completions"
+
+
+def test_get_llm_api_key_empty_when_not_set() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        manager = AppConfigManager(config_dir=tmpdir)
+        assert manager.get_llm_api_key() == ""
