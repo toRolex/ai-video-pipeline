@@ -179,7 +179,8 @@ def test_set_vision_model() -> None:
         assert config["model"] == "mimo-v2-omni"
 
 
-def test_vision_api_key_empty_when_not_set() -> None:
+def test_vision_api_key_empty_when_not_set(monkeypatch) -> None:
+    monkeypatch.delenv("XIAOMI_VISION_API_KEY", raising=False)
     with tempfile.TemporaryDirectory() as tmpdir:
         manager = AppConfigManager(config_dir=tmpdir)
         assert manager.get_vision_api_key() == ""
@@ -201,7 +202,8 @@ def test_get_llm_endpoint_from_env(monkeypatch) -> None:
         assert manager.get_llm_endpoint() == "https://api.deepseek.com/chat/completions"
 
 
-def test_get_llm_api_key_empty_when_not_set() -> None:
+def test_get_llm_api_key_empty_when_not_set(monkeypatch) -> None:
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
     with tempfile.TemporaryDirectory() as tmpdir:
         manager = AppConfigManager(config_dir=tmpdir)
         assert manager.get_llm_api_key() == ""

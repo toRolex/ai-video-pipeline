@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import warnings
 from copy import deepcopy
 from pathlib import Path
 from typing import Any
@@ -133,6 +134,16 @@ def _inject_env_secrets(payload: dict, root_dir: Path) -> dict:
 
 
 def load_provider_config(root_dir: Path) -> dict:
+    """[DEPRECATED] 请使用 AppConfigManager 代替。
+
+    此函数保留用于前端"系统配置"页面的向后兼容。
+    新代码应使用 AppConfigManager 读取配置。
+    """
+    warnings.warn(
+        "load_provider_config is deprecated, use AppConfigManager instead",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     config_path = Path(root_dir) / "config" / "providers.yaml"
     if not config_path.exists():
         return default_provider_document()
