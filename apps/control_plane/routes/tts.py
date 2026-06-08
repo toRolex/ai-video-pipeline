@@ -196,10 +196,23 @@ async def preview_tts(request: TTSPreviewRequest):
                 import base64
                 audio_bytes = base64.b64decode(audio_data)
                 from fastapi.responses import Response
+
+                # 根据 audio_format 设置正确的 media_type
+                audio_format = config.audio_format or "wav"
+                if audio_format == "wav":
+                    media_type = "audio/wav"
+                    filename = "preview.wav"
+                elif audio_format == "pcm16":
+                    media_type = "audio/L16;rate=24000;channels=1"
+                    filename = "preview.pcm"
+                else:
+                    media_type = "audio/wav"
+                    filename = "preview.wav"
+
                 return Response(
                     content=audio_bytes,
-                    media_type="audio/mpeg",
-                    headers={"Content-Disposition": "attachment; filename=preview.mp3"}
+                    media_type=media_type,
+                    headers={"Content-Disposition": f"attachment; filename={filename}"}
                 )
 
         raise HTTPException(status_code=500, detail="TTS API未返回音频数据")
