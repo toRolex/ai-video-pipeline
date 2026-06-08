@@ -114,6 +114,8 @@ class TTSConfig:
             director_guidance=self.director_guidance if self.director_guidance is not None else defaults["director_guidance"],
             audio_tags_enabled=self.audio_tags_enabled if self.audio_tags_enabled is not None else defaults["audio_tags_enabled"],
             audio_tags=self.audio_tags if self.audio_tags is not None else defaults["audio_tags"],
+            voice_clone_sample_path=self.voice_clone_sample_path,
+            voice_clone_mime_type=self.voice_clone_mime_type,
             audio_format=self.audio_format if self.audio_format is not None else defaults["audio_format"],
             sample_rate=self.sample_rate if self.sample_rate is not None else defaults["sample_rate"],
             bitrate=self.bitrate if self.bitrate is not None else defaults["bitrate"],
