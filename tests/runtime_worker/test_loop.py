@@ -233,7 +233,6 @@ def test_worker_loop_uses_shared_vertical_assembler_for_selected_clips(tmp_path:
         captured.update(kwargs)
         Path(kwargs["output_path"]).write_bytes(b"base-video")
 
-    monkeypatch.setattr("apps.runtime_worker.loop.get_media_duration", lambda _: 4.0)
     monkeypatch.setattr(
         "apps.runtime_worker.loop.assemble_vertical_base_video",
         fake_assemble_vertical_base_video,
