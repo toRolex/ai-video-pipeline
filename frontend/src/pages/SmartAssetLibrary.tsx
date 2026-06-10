@@ -472,7 +472,10 @@ export default function SmartAssetLibrary({ projectId: _projectId }: Props) {
                 step={0.1}
                 value={filters.durationMax === 0 ? durationRange.max : filters.durationMax}
                 onChange={(e) =>
-                  setFilters((f) => ({ ...f, durationMax: Number(e.target.value) }))
+                  setFilters((f) => ({
+                    ...f,
+                    durationMax: Math.max(Number(e.target.value), f.durationMin),
+                  }))
                 }
               />
               <span>{(filters.durationMax === 0 ? durationRange.max : filters.durationMax).toFixed(1)}s</span>
