@@ -89,6 +89,23 @@ export default function SmartAssetLibrary({ projectId: _projectId }: Props) {
     return counts;
   }, [assets]);
 
+  const durationRange = useMemo(() => {
+    if (assets.length === 0) return { min: 0, max: 0 };
+    const durations = assets.map((a) => a.duration_seconds);
+    return {
+      min: Math.floor(Math.min(...durations) * 10) / 10,
+      max: Math.ceil(Math.max(...durations) * 10) / 10,
+    };
+  }, [assets]);
+
+  const usageRange = useMemo(() => {
+    if (assets.length === 0) return { min: 0, max: 0 };
+    const counts = assets.map((a) => a.usage_count);
+    return { min: Math.min(...counts), max: Math.max(...counts) };
+  }, [assets]);
+
+  void usageRange; // reserved for future usage-count filter (issue #12)
+
   const filteredAssets = useMemo(() => {
     const keywordLower = filters.keyword.trim().toLowerCase();
 
@@ -108,6 +125,14 @@ export default function SmartAssetLibrary({ projectId: _projectId }: Props) {
         if (!haystack.includes(keywordLower)) {
           return false;
         }
+      }
+
+      if (filters.durationMax > 0 && asset.duration_seconds > filters.durationMax) {
+        return false;
+      }
+
+      if (asset.duration_seconds < filters.durationMin) {
+        return false;
       }
 
       return true;
@@ -405,6 +430,40 @@ export default function SmartAssetLibrary({ projectId: _projectId }: Props) {
               </option>
             ))}
           </select>
+
+          {durationRange.max > 0 && (
+            <div className="flex items-center gap-1.5 text-sm text-[#57606a]">
+              <span>时长</span>
+              <input
+                type="range"
+                className="w-20 accent-blue-600"
+                min={durationRange.min}
+                max={durationRange.max}
+                step={0.1}
+                value={filters.durationMin}
+                onChange={(e) =>
+                  setFilters((f) => ({
+                    ...f,
+                    durationMin: Math.min(Number(e.target.value), f.durationMax === 0 ? durationRange.max : f.durationMax),
+                  }))
+                }
+              />
+              <span>{filters.durationMin.toFixed(1)}s</span>
+              <span>~</span>
+              <input
+                type="range"
+                className="w-20 accent-blue-600"
+                min={durationRange.min}
+                max={durationRange.max}
+                step={0.1}
+                value={filters.durationMax === 0 ? durationRange.max : filters.durationMax}
+                onChange={(e) =>
+                  setFilters((f) => ({ ...f, durationMax: Number(e.target.value) }))
+                }
+              />
+              <span>{(filters.durationMax === 0 ? durationRange.max : filters.durationMax).toFixed(1)}s</span>
+            </div>
+          )}
 
           <button
             className="text-sm text-blue-600 hover:text-blue-800 px-2 py-1"
