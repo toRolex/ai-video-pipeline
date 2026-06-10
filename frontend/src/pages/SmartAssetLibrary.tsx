@@ -104,8 +104,6 @@ export default function SmartAssetLibrary({ projectId: _projectId }: Props) {
     return { min: Math.min(...counts), max: Math.max(...counts) };
   }, [assets]);
 
-  void usageRange; // reserved for future usage-count filter (issue #12)
-
   const filteredAssets = useMemo(() => {
     const keywordLower = filters.keyword.trim().toLowerCase();
 
@@ -132,6 +130,22 @@ export default function SmartAssetLibrary({ projectId: _projectId }: Props) {
       }
 
       if (asset.duration_seconds < filters.durationMin) {
+        return false;
+      }
+
+      if (asset.confidence < filters.confidenceMin) {
+        return false;
+      }
+
+      if (asset.confidence > filters.confidenceMax) {
+        return false;
+      }
+
+      if (filters.usageMax > 0 && asset.usage_count > filters.usageMax) {
+        return false;
+      }
+
+      if (asset.usage_count < filters.usageMin) {
         return false;
       }
 
@@ -492,6 +506,70 @@ export default function SmartAssetLibrary({ projectId: _projectId }: Props) {
           onChange={(e) => setFilters((f) => ({ ...f, keyword: e.target.value }))}
           placeholder="搜索 file_path / 标签"
         />
+
+        {showAdvanced && (
+          <div className="flex flex-wrap gap-4 items-center text-sm text-[#57606a]">
+            <div className="flex items-center gap-1.5">
+              <span>置信度</span>
+              <input
+                type="number"
+                className="w-16 border rounded px-2 py-1 text-sm"
+                min={0}
+                max={1}
+                step={0.1}
+                value={filters.confidenceMin}
+                onChange={(e) =>
+                  setFilters((f) => ({ ...f, confidenceMin: Number(e.target.value) }))
+                }
+                onBlur={(e) => {
+                  const v = Math.max(0, Math.min(1, Number(e.target.value)));
+                  setFilters((f) => ({ ...f, confidenceMin: v }));
+                }}
+              />
+              <span>~</span>
+              <input
+                type="number"
+                className="w-16 border rounded px-2 py-1 text-sm"
+                min={0}
+                max={1}
+                step={0.1}
+                value={filters.confidenceMax}
+                onChange={(e) =>
+                  setFilters((f) => ({ ...f, confidenceMax: Number(e.target.value) }))
+                }
+                onBlur={(e) => {
+                  const v = Math.max(0, Math.min(1, Number(e.target.value)));
+                  setFilters((f) => ({ ...f, confidenceMax: v }));
+                }}
+              />
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <span>使用次数</span>
+              <input
+                type="number"
+                className="w-16 border rounded px-2 py-1 text-sm"
+                min={0}
+                step={1}
+                value={filters.usageMin}
+                onChange={(e) =>
+                  setFilters((f) => ({ ...f, usageMin: Math.max(0, Number(e.target.value)) }))
+                }
+              />
+              <span>~</span>
+              <input
+                type="number"
+                className="w-16 border rounded px-2 py-1 text-sm"
+                min={0}
+                step={1}
+                value={filters.usageMax === 0 ? usageRange.max : filters.usageMax}
+                onChange={(e) =>
+                  setFilters((f) => ({ ...f, usageMax: Math.max(0, Number(e.target.value)) }))
+                }
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {selectedIds.size > 0 && (
