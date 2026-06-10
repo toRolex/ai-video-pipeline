@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
-import type { AssetCategory, AssetRecord, AssetStats, IndexStatus } from "../types";
+import type { AssetCategory, AssetFilters, AssetRecord, AssetStats, IndexStatus } from "../types";
 import AssetGrid from "../components/AssetGrid";
 import AssetPreviewPanel from "../components/AssetPreviewPanel";
 import AssetUploadZone from "../components/AssetUploadZone";
@@ -20,6 +20,26 @@ const CATEGORIES = [
   "产品特写",
 ] as const;
 
+const STATUS_OPTIONS = ["available", "disabled", "pending_review"] as const;
+
+const STATUS_LABELS: Record<string, string> = {
+  available: "可用",
+  disabled: "已禁用",
+  pending_review: "待审核",
+};
+
+const DEFAULT_FILTERS: AssetFilters = {
+  category: "",
+  status: "",
+  keyword: "",
+  durationMin: 0,
+  durationMax: 0,
+  confidenceMin: 0,
+  confidenceMax: 1,
+  usageMin: 0,
+  usageMax: 0,
+};
+
 interface Props {
   projectId: string;
 }
@@ -34,8 +54,8 @@ const DEFAULT_STATS: AssetStats = {
 export default function SmartAssetLibrary({ projectId: _projectId }: Props) {
   const [assets, setAssets] = useState<AssetRecord[]>([]);
   const [stats, setStats] = useState<AssetStats>(DEFAULT_STATS);
-  const [category, setCategory] = useState("");
-  const [keyword, setKeyword] = useState("");
+  const [filters, setFilters] = useState<AssetFilters>(DEFAULT_FILTERS);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [previewAsset, setPreviewAsset] = useState<AssetRecord | null>(null);
 
@@ -70,23 +90,29 @@ export default function SmartAssetLibrary({ projectId: _projectId }: Props) {
   }, [assets]);
 
   const filteredAssets = useMemo(() => {
-    const keywordLower = keyword.trim().toLowerCase();
+    const keywordLower = filters.keyword.trim().toLowerCase();
 
     return assets.filter((asset) => {
-      if (category && asset.category !== category) {
+      if (filters.category && asset.category !== filters.category) {
         return false;
       }
 
-      if (!keywordLower) {
-        return true;
+      if (filters.status && asset.status !== filters.status) {
+        return false;
       }
 
-      return [asset.file_path, asset.tags]
-        .join(" ")
-        .toLowerCase()
-        .includes(keywordLower);
+      if (keywordLower) {
+        const haystack = [asset.file_path, asset.tags]
+          .join(" ")
+          .toLowerCase();
+        if (!haystack.includes(keywordLower)) {
+          return false;
+        }
+      }
+
+      return true;
     });
-  }, [assets, category, keyword]);
+  }, [assets, filters]);
 
   const toggleSelect = useCallback((assetId: string) => {
     setSelectedIds((prev) => {
@@ -352,24 +378,59 @@ export default function SmartAssetLibrary({ projectId: _projectId }: Props) {
         />
       )}
 
-      <div className="flex gap-2 items-center">
-        <select
-          className="border rounded-md px-3 py-2 text-sm bg-white"
-          value={category}
-          onChange={(event) => setCategory(event.target.value)}
-        >
-          <option value="">全部分类 ({stats.total})</option>
-          {CATEGORIES.map((item) => (
-            <option key={item} value={item}>
-              {item} ({categoryCounts.get(item) || 0})
-            </option>
-          ))}
-        </select>
+      <div className="space-y-2">
+        <div className="flex flex-wrap gap-2 items-center">
+          <select
+            className="border rounded-md px-3 py-2 text-sm bg-white"
+            value={filters.category}
+            onChange={(e) => setFilters((f) => ({ ...f, category: e.target.value }))}
+          >
+            <option value="">全部分类 ({stats.total})</option>
+            {CATEGORIES.map((item) => (
+              <option key={item} value={item}>
+                {item} ({categoryCounts.get(item) || 0})
+              </option>
+            ))}
+          </select>
+
+          <select
+            className="border rounded-md px-3 py-2 text-sm bg-white"
+            value={filters.status}
+            onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}
+          >
+            <option value="">全部状态</option>
+            {STATUS_OPTIONS.map((s) => (
+              <option key={s} value={s}>
+                {STATUS_LABELS[s]}
+              </option>
+            ))}
+          </select>
+
+          <button
+            className="text-sm text-blue-600 hover:text-blue-800 px-2 py-1"
+            onClick={() => setShowAdvanced((v) => !v)}
+          >
+            {showAdvanced ? "收起筛选 ▲" : "更多筛选 ▼"}
+          </button>
+
+          <button
+            className="text-sm text-gray-500 hover:text-gray-700 px-2 py-1 border rounded"
+            onClick={() => setFilters(DEFAULT_FILTERS)}
+          >
+            清除筛选
+          </button>
+
+          {filteredAssets.length !== assets.length && (
+            <span className="text-xs text-[#57606a] ml-auto">
+              共 {filteredAssets.length} / {assets.length} 条素材
+            </span>
+          )}
+        </div>
 
         <input
-          className="flex-1 border rounded-md px-3 py-2 text-sm"
-          value={keyword}
-          onChange={(event) => setKeyword(event.target.value)}
+          className="w-full border rounded-md px-3 py-2 text-sm"
+          value={filters.keyword}
+          onChange={(e) => setFilters((f) => ({ ...f, keyword: e.target.value }))}
           placeholder="搜索 file_path / 标签"
         />
       </div>
