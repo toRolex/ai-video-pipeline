@@ -584,13 +584,26 @@ export default function SmartAssetLibrary({ projectId: _projectId }: Props) {
       )}
 
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-4 items-start">
-        <AssetGrid
-          assets={filteredAssets}
-          selectedIds={selectedIds}
-          onToggleSelect={toggleSelect}
-          onPreview={setPreviewAsset}
-          onDelete={handleDelete}
-        />
+        {filteredAssets.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-[#57606a]">
+            <p className="text-lg mb-2">没有符合筛选条件的素材</p>
+            <p className="text-sm mb-4">试试调整筛选条件或清除所有筛选</p>
+            <button
+              className="px-4 py-2 text-sm border rounded-md hover:bg-gray-50"
+              onClick={() => setFilters(DEFAULT_FILTERS)}
+            >
+              清除筛选
+            </button>
+          </div>
+        ) : (
+          <AssetGrid
+            assets={filteredAssets}
+            selectedIds={selectedIds}
+            onToggleSelect={toggleSelect}
+            onPreview={setPreviewAsset}
+            onDelete={handleDelete}
+          />
+        )}
 
         <div className="xl:sticky xl:top-4">
           <AssetPreviewPanel
