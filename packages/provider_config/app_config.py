@@ -246,3 +246,9 @@ class AppConfigManager:
         if not value:
             value = os.getenv("VISION_MODEL", "").strip()
         return value
+
+    def get_media_config(self) -> dict[str, Any]:
+        config = self._load()
+        media = config.get("media", {})
+        defaults = DEFAULTS["media"]
+        return _deep_merge(defaults, media)
