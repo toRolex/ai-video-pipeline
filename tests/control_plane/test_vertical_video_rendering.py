@@ -33,8 +33,8 @@ def test_video_rendering_uses_media_bridge_with_selected_clips(monkeypatch, tmp_
 
     captured: dict[str, Any] = {}
 
-    class StubMediaBridge:
-        def __init__(self, _root_dir: Path) -> None:
+    class StubVideoService:
+        def __init__(self, dry_run: bool = False) -> None:
             pass
 
         def build_base_video(self, actual_project_dir: Path, payload: dict, output_path: Path) -> None:
@@ -48,7 +48,7 @@ def test_video_rendering_uses_media_bridge_with_selected_clips(monkeypatch, tmp_
             pass
 
     monkeypatch.setattr("apps.control_plane.app.load_environment", lambda _root_dir: None)
-    monkeypatch.setattr("apps.control_plane.app.LegacyMediaBridge", StubMediaBridge)
+    monkeypatch.setattr("apps.control_plane.app.VideoService", StubVideoService)
     monkeypatch.setattr("apps.control_plane.app.LegacyScheduleBridge", StubScheduleBridge)
 
     artifacts = _phase_to_artifacts(
@@ -87,8 +87,8 @@ def test_final_review_allows_missing_srt_when_skip_subtitle_is_enabled(monkeypat
 
     captured: dict[str, Any] = {}
 
-    class StubMediaBridge:
-        def __init__(self, _root_dir: Path) -> None:
+    class StubVideoService:
+        def __init__(self, dry_run: bool = False) -> None:
             pass
 
         def burn_final_video(
@@ -115,7 +115,7 @@ def test_final_review_allows_missing_srt_when_skip_subtitle_is_enabled(monkeypat
             self.calls.append((project_name, payload, final_video_path))
 
     monkeypatch.setattr("apps.control_plane.app.load_environment", lambda _root_dir: None)
-    monkeypatch.setattr("apps.control_plane.app.LegacyMediaBridge", StubMediaBridge)
+    monkeypatch.setattr("apps.control_plane.app.VideoService", StubVideoService)
     monkeypatch.setattr("apps.control_plane.app.LegacyScheduleBridge", StubScheduleBridge)
 
     artifacts = _phase_to_artifacts(
