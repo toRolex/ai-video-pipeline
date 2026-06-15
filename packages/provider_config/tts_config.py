@@ -127,7 +127,7 @@ class TTSConfig:
             audio_tags=self.audio_tags if self.audio_tags is not None else defaults["audio_tags"],
             voice_clone_sample_path=self.voice_clone_sample_path,
             voice_clone_mime_type=self.voice_clone_mime_type,
-            optimize_text_preview=self.optimize_text_preview if self.optimize_text_preview is not None else defaults["optimize_text_preview"],
+            optimize_text_preview=self.optimize_text_preview,
             instructions=self.instructions if self.instructions is not None else defaults["instructions"],
             optimize_instructions=self.optimize_instructions if self.optimize_instructions is not None else defaults["optimize_instructions"],
             language_type=self.language_type if self.language_type is not None else defaults["language_type"],
@@ -142,7 +142,7 @@ class TTSConfig:
 
 
 class TTSConfigManager:
-    DEFAULTS = {
+    DEFAULTS: dict[str, Any] = {
         "model": "mimo-v2.5-tts",
         "voice": "Mia",
         "fallback_voice": "Dean",
