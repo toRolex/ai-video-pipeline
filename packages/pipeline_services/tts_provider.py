@@ -22,6 +22,72 @@ class TTSQuotaExceededError(TTSBlockedError):
     pass
 
 
+class QwenTTSProvider:
+    """百炼 Qwen-TTS 非实时语音合成 provider。
+
+    调用 MultiModalConversation (/chat/completions) 接口，
+    非流式返回音频 URL，下载后返回 bytes。
+    """
+
+    def __init__(self, api_key: str, base_url: str = "https://dashscope.aliyuncs.com/api/v1"):
+        self.api_key = api_key
+        self.base_url = base_url.rstrip("/")
+
+    def _build_payload(self, text: str, config: Any) -> dict[str, Any]:
+        input_data: dict[str, Any] = {
+            "text": text,
+            "voice": config.voice,
+        }
+        if getattr(config, "language_type", None):
+            input_data["language_type"] = config.language_type
+        instructions = getattr(config, "instructions", "")
+        if instructions:
+            input_data["instructions"] = instructions
+            if getattr(config, "optimize_instructions", False):
+                input_data["optimize_instructions"] = True
+        return {
+            "model": config.model,
+            "input": input_data,
+        }
+
+    def _http_post(self, payload: dict[str, Any]) -> Any:
+        url = f"{self.base_url}/services/aigc/multimodal-generation/generation"
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+        return requests.post(url, headers=headers, json=payload, timeout=180)
+
+    def synthesize(self, text: str, config: Any) -> bytes:
+        payload = self._build_payload(text, config)
+        resp = self._http_post(payload)
+
+        if resp.status_code == 429:
+            raise TTSQuotaExceededError("TTS 配额超限")
+        if resp.status_code in (401, 403):
+            raise TTSBlockedError(f"TTS 鉴权失败: {resp.status_code}")
+        resp.raise_for_status()
+
+        body = resp.json()
+        code = body.get("code", "")
+        if code and code != "":
+            raise TTSBlockedError(f"Qwen TTS error: {code} - {body.get('message', '')}")
+
+        audio_url = None
+        output = body.get("output", {})
+        if isinstance(output, dict):
+            audio = output.get("audio", {})
+            if isinstance(audio, dict):
+                audio_url = audio.get("url")
+
+        if not audio_url:
+            raise TTSBlockedError("Qwen TTS 响应中未找到音频 URL")
+
+        audio_resp = requests.get(audio_url, timeout=60)
+        audio_resp.raise_for_status()
+        return audio_resp.content
+
+
 class MiMoTTSProvider:
     def __init__(self, api_key: str, base_url: str = "https://api.xiaomimimo.com/v1"):
         self.api_key = api_key
