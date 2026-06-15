@@ -54,7 +54,7 @@ class TestQwenTTSProvider:
                 assert result == FAKE_AUDIO
 
     def test_synthesize_with_instructions(self):
-        """instruct 模型 + instructions"""
+        """instruct 模型 + instructions + optimize_instructions"""
         provider = QwenTTSProvider(api_key="sk-test")
         config = FakeConfig(
             model="qwen3-tts-instruct-flash",
