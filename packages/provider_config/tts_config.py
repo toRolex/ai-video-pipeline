@@ -37,7 +37,7 @@ class TTSConfig:
 
     # Qwen-TTS 专属字段
     instructions: str | None = None  # 指令控制文本
-    optimize_instructions: bool | None = None  # 是否优化指令
+    optimize_instructions: bool = False  # 是否优化指令
     language_type: str | None = None  # 语种 (Auto/Chinese/English/...)
 
     audio_format: str | None = None
@@ -98,7 +98,7 @@ class TTSConfig:
             voice_clone_mime_type=data.get("voice_clone_mime_type"),
             optimize_text_preview=data.get("optimize_text_preview", False),
             instructions=data.get("instructions"),
-            optimize_instructions=data.get("optimize_instructions"),
+            optimize_instructions=data.get("optimize_instructions", False),
             language_type=data.get("language_type"),
             audio_format=data.get("audio_format"),
             sample_rate=data.get("sample_rate"),
@@ -129,7 +129,7 @@ class TTSConfig:
             voice_clone_mime_type=self.voice_clone_mime_type,
             optimize_text_preview=self.optimize_text_preview,
             instructions=self.instructions if self.instructions is not None else defaults["instructions"],
-            optimize_instructions=self.optimize_instructions if self.optimize_instructions is not None else defaults["optimize_instructions"],
+            optimize_instructions=self.optimize_instructions,
             language_type=self.language_type if self.language_type is not None else defaults["language_type"],
             audio_format=self.audio_format if self.audio_format is not None else defaults["audio_format"],
             sample_rate=self.sample_rate if self.sample_rate is not None else defaults["sample_rate"],
