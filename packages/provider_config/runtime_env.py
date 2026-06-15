@@ -48,6 +48,17 @@ LLM_ENV_MAPPINGS = {
 }
 
 TTS_ENV_MAPPINGS = {
+    "qwen": {
+        "provider": "qwen",
+        "env": {
+            "DASHSCOPE_API_KEY": "api_key",
+            "DASHSCOPE_API_URL": "endpoint",
+            "QWEN_TTS_MODEL": "model",
+            "QWEN_TTS_VOICE": "voice",
+            "QWEN_TTS_INSTRUCTIONS": "instructions",
+            "QWEN_TTS_LANGUAGE_TYPE": "language_type",
+        },
+    },
     "mimo": {
         "provider": "mimo",
         "env": {

@@ -96,6 +96,7 @@ class AppConfigManager:
 
     API_KEY_ENV_MAP = {
         "mimo": "MIMO_API_KEY",
+        "qwen": "DASHSCOPE_API_KEY",
         "deepseek": "DEEPSEEK_API_KEY",
         "kimi": "KIMI_API_KEY",
         "minimax": "MINIMAX_API_KEY",
@@ -103,6 +104,7 @@ class AppConfigManager:
 
     API_BASE_URL_ENV_MAP = {
         "mimo": "MIMO_API_BASE_URL",
+        "qwen": "DASHSCOPE_API_URL",
         "deepseek": "DEEPSEEK_API_URL",
         "kimi": "KIMI_API_URL",
         "minimax": "MINIMAX_TTS_URL",

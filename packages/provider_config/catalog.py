@@ -69,6 +69,19 @@ PROVIDER_OPTIONS = {
         "tts": {
             "label": "TTS",
             "providers": {
+                "qwen": {
+                    "label": "Qwen-TTS",
+                    "fields": [
+                        {"name": "api_key", "label": "API Key", "kind": "text", "secret": True},
+                        {"name": "endpoint", "label": "Endpoint", "kind": "text"},
+                        {"name": "model", "label": "Model", "kind": "text"},
+                        {"name": "voice", "label": "Voice", "kind": "text"},
+                        {"name": "instructions", "label": "Instructions", "kind": "text"},
+                        {"name": "language_type", "label": "Language", "kind": "text"},
+                        {"name": "audio_format", "label": "Audio Format", "kind": "text"},
+                        {"name": "extra_headers", "label": "Extra Headers", "kind": "json"},
+                    ],
+                },
                 "mimo": {
                     "label": "MiMo",
                     "fields": [
@@ -251,6 +264,16 @@ DEFAULT_PROVIDER_DOCUMENT = {
         "tts": {
             "selected": "mimo",
             "providers": {
+                "qwen": {
+                    "api_key": "",
+                    "endpoint": "https://dashscope.aliyuncs.com/api/v1",
+                    "model": "qwen3-tts-flash",
+                    "voice": "Rocky",
+                    "instructions": "",
+                    "language_type": "Chinese",
+                    "audio_format": "wav",
+                    "extra_headers": "",
+                },
                 "mimo": {
                     "api_key": "",
                     "endpoint": "https://api.xiaomimimo.com/v1",
