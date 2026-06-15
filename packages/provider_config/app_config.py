@@ -8,7 +8,7 @@ from typing import Any
 try:
     from dotenv import load_dotenv
 except ImportError:
-    load_dotenv = None
+    load_dotenv: Any | None = None
 
 
 DEFAULTS: dict[str, Any] = {
