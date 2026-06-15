@@ -283,8 +283,10 @@ export const api = {
       body: JSON.stringify(config),
     }),
 
-  getTTSVoices: () =>
-    request<{ preset_voices: Array<{ id: string; label: string; note: string }> }>("/api/tts/voices"),
+  getTTSVoices: (provider?: string) =>
+    request<{ preset_voices: Array<{ id: string; label: string; note: string }> }>(
+      `/api/tts/voices${provider ? `?provider=${provider}` : ""}`
+    ),
 
   previewTTS: async (requestBody: { text: string; model?: string; voice?: string; style_prompt?: string; voice_design_prompt?: string }) => {
     const res = await fetch("/api/tts/preview", {

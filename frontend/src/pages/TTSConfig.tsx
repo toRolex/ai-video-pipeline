@@ -22,6 +22,9 @@ interface TTSConfig {
   optimize_text_preview?: boolean;
   voice_clone_sample_path?: string | null;
   voice_clone_mime_type?: string | null;
+  instructions?: string | null;
+  optimize_instructions?: boolean | null;
+  language_type?: string | null;
 }
 
 interface Voice {
@@ -51,10 +54,83 @@ const VOICE_POOLS: Record<string, Voice[]> = {
     { id: "Milo", label: "Milo", note: "英文男声" },
     { id: "Dean", label: "Dean", note: "英文男声" },
   ],
-  "mimo-v2-tts": [
-    { id: "mimo_default", label: "MiMo 默认", note: "官方默认音色" },
-    { id: "default_zh", label: "中文女声", note: "default_zh" },
-    { id: "default_en", label: "英文女声", note: "default_en" },
+  "qwen3-tts-flash": [
+    { id: "Rocky", label: "阿强（粤语）", note: "幽默风趣的粤语男声" },
+    { id: "Kiki", label: "阿清（粤语）", note: "甜美的港妹闺蜜女声" },
+    { id: "Cherry", label: "芊悦", note: "阳光积极女声" },
+    { id: "Serena", label: "苏瑶", note: "温柔女声" },
+    { id: "Ethan", label: "晨煦", note: "阳光温暖男声" },
+    { id: "Chelsie", label: "Chelsie", note: "英文女声" },
+    { id: "Momo", label: "Momo", note: "英文女声" },
+    { id: "Vivian", label: "Vivian", note: "英文女声" },
+    { id: "Moon", label: "Moon", note: "英文女声" },
+    { id: "Maia", label: "Maia", note: "英文女声" },
+    { id: "Kai", label: "Kai", note: "英文男声" },
+    { id: "Nofish", label: "Nofish", note: "英文男声" },
+    { id: "Bella", label: "Bella", note: "英文女声" },
+    { id: "Jennifer", label: "Jennifer", note: "英文女声" },
+    { id: "Ryan", label: "Ryan", note: "英文男声" },
+    { id: "Katerina", label: "Katerina", note: "英文女声" },
+    { id: "Eldric Sage", label: "Eldric Sage", note: "英文男声" },
+    { id: "Mia", label: "Mia", note: "英文女声" },
+    { id: "Mochi", label: "Mochi", note: "英文女声" },
+    { id: "Bellona", label: "Bellona", note: "英文女声" },
+    { id: "Vincent", label: "Vincent", note: "英文男声" },
+    { id: "Bunny", label: "Bunny", note: "英文女声" },
+    { id: "Neil", label: "Neil", note: "英文男声" },
+    { id: "Elias", label: "Elias", note: "英文男声" },
+    { id: "Arthur", label: "Arthur", note: "英文男声" },
+    { id: "Nini", label: "Nini", note: "英文女声" },
+    { id: "Seren", label: "Seren", note: "英文女声" },
+    { id: "Pip", label: "Pip", note: "英文女声" },
+    { id: "Stella", label: "Stella", note: "英文女声" },
+    { id: "Jada", label: "Jada", note: "英文女声" },
+    { id: "Dylan", label: "Dylan", note: "英文男声" },
+    { id: "Li", label: "Li", note: "英文男声" },
+    { id: "Marcus", label: "Marcus", note: "英文男声" },
+    { id: "Roy", label: "Roy", note: "英文男声" },
+    { id: "Peter", label: "Peter", note: "英文男声" },
+    { id: "Sunny", label: "Sunny", note: "英文女声" },
+    { id: "Eric", label: "Eric", note: "英文男声" },
+  ],
+  "qwen3-tts-instruct-flash": [
+    { id: "Rocky", label: "阿强（粤语）", note: "幽默风趣的粤语男声" },
+    { id: "Kiki", label: "阿清（粤语）", note: "甜美的港妹闺蜜女声" },
+    { id: "Cherry", label: "芊悦", note: "阳光积极女声" },
+    { id: "Serena", label: "苏瑶", note: "温柔女声" },
+    { id: "Ethan", label: "晨煦", note: "阳光温暖男声" },
+    { id: "Chelsie", label: "Chelsie", note: "英文女声" },
+    { id: "Momo", label: "Momo", note: "英文女声" },
+    { id: "Vivian", label: "Vivian", note: "英文女声" },
+    { id: "Moon", label: "Moon", note: "英文女声" },
+    { id: "Maia", label: "Maia", note: "英文女声" },
+    { id: "Kai", label: "Kai", note: "英文男声" },
+    { id: "Nofish", label: "Nofish", note: "英文男声" },
+    { id: "Bella", label: "Bella", note: "英文女声" },
+    { id: "Jennifer", label: "Jennifer", note: "英文女声" },
+    { id: "Ryan", label: "Ryan", note: "英文男声" },
+    { id: "Katerina", label: "Katerina", note: "英文女声" },
+    { id: "Eldric Sage", label: "Eldric Sage", note: "英文男声" },
+    { id: "Mia", label: "Mia", note: "英文女声" },
+    { id: "Mochi", label: "Mochi", note: "英文女声" },
+    { id: "Bellona", label: "Bellona", note: "英文女声" },
+    { id: "Vincent", label: "Vincent", note: "英文男声" },
+    { id: "Bunny", label: "Bunny", note: "英文女声" },
+    { id: "Neil", label: "Neil", note: "英文男声" },
+    { id: "Elias", label: "Elias", note: "英文男声" },
+    { id: "Arthur", label: "Arthur", note: "英文男声" },
+    { id: "Nini", label: "Nini", note: "英文女声" },
+    { id: "Seren", label: "Seren", note: "英文女声" },
+    { id: "Pip", label: "Pip", note: "英文女声" },
+    { id: "Stella", label: "Stella", note: "英文女声" },
+    { id: "Jada", label: "Jada", note: "英文女声" },
+    { id: "Dylan", label: "Dylan", note: "英文男声" },
+    { id: "Li", label: "Li", note: "英文男声" },
+    { id: "Marcus", label: "Marcus", note: "英文男声" },
+    { id: "Roy", label: "Roy", note: "英文男声" },
+    { id: "Peter", label: "Peter", note: "英文男声" },
+    { id: "Sunny", label: "Sunny", note: "英文女声" },
+    { id: "Eric", label: "Eric", note: "英文男声" },
   ],
 };
 
@@ -283,20 +359,32 @@ export default function TTSConfigPage() {
               </div>
               <div
                 className={`border-2 rounded-xl p-4 cursor-pointer ${
-                  config.model === "mimo-v2-tts"
-                    ? "border-orange-500 bg-orange-50"
+                  config.model === "qwen3-tts-flash"
+                    ? "border-teal-500 bg-teal-50"
                     : "border-gray-200 hover:border-gray-300"
                 }`}
-                onClick={() => setConfig({ ...config, model: "mimo-v2-tts" })}
+                onClick={() => setConfig({ ...config, model: "qwen3-tts-flash", voice: "Rocky" })}
               >
-                <h3 className="font-semibold">V2 预置</h3>
-                <p className="text-sm text-gray-500">mimo-v2-tts</p>
-                <p className="text-sm text-gray-600 mt-2">旧版 V2 预置音色</p>
+                <h3 className="font-semibold">Qwen Flash</h3>
+                <p className="text-sm text-gray-500">qwen3-tts-flash</p>
+                <p className="text-sm text-gray-600 mt-2">基础非实时合成</p>
+              </div>
+              <div
+                className={`border-2 rounded-xl p-4 cursor-pointer ${
+                  config.model === "qwen3-tts-instruct-flash"
+                    ? "border-cyan-500 bg-cyan-50"
+                    : "border-gray-200 hover:border-gray-300"
+                }`}
+                onClick={() => setConfig({ ...config, model: "qwen3-tts-instruct-flash", voice: "Rocky" })}
+              >
+                <h3 className="font-semibold">Qwen Instruct</h3>
+                <p className="text-sm text-gray-500">qwen3-tts-instruct-flash</p>
+                <p className="text-sm text-gray-600 mt-2">指令控制风格</p>
               </div>
             </div>
           </section>
 
-          {(config.model === "mimo-v2.5-tts" || config.model === "mimo-v2-tts") && (
+          {(config.model === "mimo-v2.5-tts" || config.model?.startsWith("qwen3-tts")) && (
             <section className="bg-white rounded-xl border border-gray-200 p-6">
               <h2 className="text-lg font-semibold mb-4">预置音色配置</h2>
               {(() => {
@@ -442,6 +530,57 @@ export default function TTSConfigPage() {
                   </div>
                 )}
               </div>
+            </section>
+          )}
+
+          {config.model?.startsWith("qwen3-tts") && (
+            <section className="bg-white rounded-xl border border-gray-200 p-6">
+              <h2 className="text-lg font-semibold mb-4">Qwen TTS 配置</h2>
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">语言类型</label>
+                  <select
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                    value={config.language_type || "Chinese"}
+                    onChange={(e) => setConfig({ ...config, language_type: e.target.value })}
+                  >
+                    <option value="Auto">Auto（自动检测）</option>
+                    <option value="Chinese">Chinese（中文）</option>
+                    <option value="English">English（英语）</option>
+                    <option value="Japanese">Japanese（日语）</option>
+                    <option value="Korean">Korean（韩语）</option>
+                    <option value="French">French（法语）</option>
+                    <option value="German">German（德语）</option>
+                    <option value="Spanish">Spanish（西班牙语）</option>
+                    <option value="Portuguese">Portuguese（葡萄牙语）</option>
+                    <option value="Russian">Russian（俄语）</option>
+                    <option value="Italian">Italian（意大利语）</option>
+                  </select>
+                </div>
+                <div className="flex items-center gap-3 pt-6">
+                  <input
+                    type="checkbox"
+                    id="optimize_instructions"
+                    checked={config.optimize_instructions || false}
+                    onChange={(e) => setConfig({ ...config, optimize_instructions: e.target.checked })}
+                    className="rounded"
+                  />
+                  <label htmlFor="optimize_instructions" className="text-sm">自动优化指令</label>
+                </div>
+              </div>
+              {config.model === "qwen3-tts-instruct-flash" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">指令控制（Instructions）</label>
+                  <textarea
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg resize-none"
+                    rows={2}
+                    placeholder="用自然语言描述语音风格，如：语速较快，热情洋溢"
+                    value={config.instructions || ""}
+                    onChange={(e) => setConfig({ ...config, instructions: e.target.value })}
+                  />
+                  <p className="mt-1 text-xs text-gray-500">仅 qwen3-tts-instruct-flash 支持指令控制</p>
+                </div>
+              )}
             </section>
           )}
 
