@@ -288,7 +288,7 @@ export const api = {
       `/api/tts/voices${provider ? `?provider=${provider}` : ""}`
     ),
 
-  previewTTS: async (requestBody: { text: string; model?: string; voice?: string; style_prompt?: string; voice_design_prompt?: string }) => {
+  previewTTS: async (requestBody: { text: string; model?: string; voice?: string; style_prompt?: string; voice_design_prompt?: string; instructions?: string; optimize_instructions?: boolean; language_type?: string }) => {
     const res = await fetch("/api/tts/preview", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

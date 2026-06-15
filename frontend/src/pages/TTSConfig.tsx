@@ -269,13 +269,19 @@ export default function TTSConfigPage() {
       const voice = config.randomize_voice && config.random_voices.length > 0
         ? config.random_voices[Math.floor(Math.random() * config.random_voices.length)]
         : config.voice;
-      const result = await api.previewTTS({
+      const requestBody: { text: string; model?: string; voice?: string; style_prompt?: string; voice_design_prompt?: string; instructions?: string; optimize_instructions?: boolean; language_type?: string } = {
         text: previewText,
         model: config.model,
         voice,
         style_prompt: config.style_prompt,
         voice_design_prompt: config.voice_design_prompt,
-      });
+      };
+      if (config.model?.startsWith("qwen3-tts")) {
+        if (config.instructions) requestBody.instructions = config.instructions;
+        if (config.optimize_instructions != null) requestBody.optimize_instructions = config.optimize_instructions;
+        if (config.language_type) requestBody.language_type = config.language_type;
+      }
+      const result = await api.previewTTS(requestBody);
       if (previewAudioUrl) URL.revokeObjectURL(previewAudioUrl);
       setPreviewAudioUrl(result);
     } catch {
