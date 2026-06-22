@@ -74,12 +74,9 @@ class ScriptGenerator:
             quality = validate_script(full_text, product, brand)
 
             if not quality["ok"]:
-                if len(full_text) < len(best_text) or not best_text:
-                    best_text = full_text
-                    best_quality = quality
+                best_text, best_quality = self._track_shorter(full_text, quality, best_text, best_quality)
                 continue
 
-            # Mandarin QA passed — convert to Cantonese if needed
             if language == "cantonese":
                 cantonese_text = self.to_cantonese(full_text, product, brand)
                 cantonese_quality = validate_cantonese_script(cantonese_text, product, brand)
@@ -91,10 +88,7 @@ class ScriptGenerator:
                         attempts=attempt,
                         quality=cantonese_quality,
                     )
-                # Cantonese QA failed — record and continue retrying
-                if len(cantonese_text) < len(best_text) or not best_text:
-                    best_text = cantonese_text
-                    best_quality = cantonese_quality
+                best_text, best_quality = self._track_shorter(cantonese_text, cantonese_quality, best_text, best_quality)
             else:
                 return ScriptResult(
                     full_text=full_text,
@@ -104,9 +98,7 @@ class ScriptGenerator:
                     quality=quality,
                 )
 
-            if len(full_text) < len(best_text) or not best_text:
-                best_text = full_text
-                best_quality = quality
+            best_text, best_quality = self._track_shorter(full_text, quality, best_text, best_quality)
 
         return ScriptResult(
             full_text=best_text,
@@ -121,6 +113,14 @@ class ScriptGenerator:
         messages = build_cantonese_conversion_messages(mandarin_text, product, brand)
         raw = self._call_llm(messages)
         return raw.strip()
+
+    @staticmethod
+    def _track_shorter(
+        text: str, quality: dict[str, Any], best_text: str, best_quality: dict[str, Any]
+    ) -> tuple[str, dict[str, Any]]:
+        if len(text) < len(best_text) or not best_text:
+            return text, quality
+        return best_text, best_quality
 
     def _generate_half(self, messages: list[dict[str, str]]) -> str:
         raw = self._call_llm(messages)
