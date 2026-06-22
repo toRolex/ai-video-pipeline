@@ -291,8 +291,8 @@ export default function ProjectWorkbench() {
         {/* ── 批量模式 UI ── */}
         {batchMode ? (
           <>
-            {/* 创建数量 */}
-            <div className="mt-4 pt-4 border-t">
+            {/* 创建数量 + 字幕总控 */}
+            <div className="mt-4 pt-4 border-t flex items-end gap-4 flex-wrap">
               <label className="grid gap-1.5 text-xs text-[#59636e] w-32">
                 创建数量
                 <input
@@ -309,6 +309,23 @@ export default function ProjectWorkbench() {
               </label>
               <div className="flex items-end pb-1">
                 <BatchScriptUploader onScripts={handleScriptsUpload} />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-[#59636e]">字幕总控</span>
+                <button
+                  type="button"
+                  className="px-3 py-2 text-sm border rounded-lg hover:bg-gray-50 transition-colors"
+                  onClick={() => setBatchConfigs((prev) => prev.map((c) => ({ ...c, skipSubtitle: true })))}
+                >
+                  全部跳过字幕
+                </button>
+                <button
+                  type="button"
+                  className="px-3 py-2 text-sm border rounded-lg hover:bg-gray-50 transition-colors"
+                  onClick={() => setBatchConfigs((prev) => prev.map((c) => ({ ...c, skipSubtitle: false })))}
+                >
+                  全部带字幕
+                </button>
               </div>
             </div>
 
