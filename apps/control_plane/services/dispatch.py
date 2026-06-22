@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
@@ -13,6 +13,11 @@ class QueuedTask:
     task_type: str = "run_phase"
     manual_script: str = ""
     uploaded_audio_path: str = ""
+    audio_source: str = "tts"
+    language: str = "mandarin"
+    cover_title: dict[str, object] = field(default_factory=dict)
+    music_track_path: str = ""
+    music_volume: int = 80
 
 
 class Dispatcher:
@@ -20,7 +25,18 @@ class Dispatcher:
         self.queue: list[QueuedTask] = []
         self.current_attempts: dict[str, dict[str, str]] = {}
 
-    def enqueue_demo_job(self, project_id: str, job_id: str, manual_script: str = "", uploaded_audio_path: str = "") -> None:
+    def enqueue_demo_job(
+        self,
+        project_id: str,
+        job_id: str,
+        manual_script: str = "",
+        uploaded_audio_path: str = "",
+        audio_source: str = "tts",
+        language: str = "mandarin",
+        cover_title: dict[str, object] | None = None,
+        music_track_path: str = "",
+        music_volume: int = 80,
+    ) -> None:
         self.queue.append(
             QueuedTask(
                 project_id=project_id,
@@ -28,6 +44,11 @@ class Dispatcher:
                 task_id=f"task-{job_id}",
                 manual_script=manual_script,
                 uploaded_audio_path=uploaded_audio_path,
+                audio_source=audio_source,
+                language=language,
+                cover_title=cover_title or {},
+                music_track_path=music_track_path,
+                music_volume=music_volume,
             )
         )
 
@@ -64,6 +85,11 @@ class Dispatcher:
             "runtime_limits": {"max_seconds": 1800},
             "manual_script": task.manual_script,
             "uploaded_audio_path": task.uploaded_audio_path,
+            "audio_source": task.audio_source,
+            "language": task.language,
+            "cover_title": task.cover_title,
+            "music_track_path": task.music_track_path,
+            "music_volume": task.music_volume,
         }
 
     def accept_report(self, task_id: str, attempt_id: str, lease_id: str) -> bool:

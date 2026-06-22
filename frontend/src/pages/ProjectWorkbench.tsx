@@ -1,10 +1,12 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
-import type { JobSummary, ScheduleEntry } from "../types";
+import type { JobSummary, ScheduleEntry, MusicTrack } from "../types";
 import JobTable from "../components/JobTable";
 import ScheduleTable from "../components/ScheduleTable";
 import SmartAssetLibrary from "./SmartAssetLibrary";
+import BatchScriptUploader from "../components/BatchScriptUploader";
+import { applyScriptSplit, type BatchConfig, defaultBatchConfig } from "../utils/batchScriptSplit";
 
 const PRODUCTS = ["荔枝菌", "羊肚菌", "松茸"];
 const PLATFORMS = [
@@ -14,25 +16,6 @@ const PLATFORMS = [
   { key: "kuaishou", label: "快手" },
 ];
 
-interface BatchConfig {
-  name: string;
-  scriptMode: "auto" | "manual";
-  manualScript: string;
-  skipSubtitle: boolean;
-  audioMode: "tts" | "upload";
-  audioFile: File | null;
-}
-
-function defaultBatchConfig(): BatchConfig {
-  return {
-    name: "",
-    scriptMode: "auto",
-    manualScript: "",
-    skipSubtitle: false,
-    audioMode: "tts",
-    audioFile: null,
-  };
-}
 
 export default function ProjectWorkbench() {
   const { id } = useParams<{ id: string }>();
@@ -48,7 +31,12 @@ export default function ProjectWorkbench() {
   const [jobName, setJobName] = useState("");
   const [scriptMode, setScriptMode] = useState<"auto" | "manual">("auto");
   const [audioFile, setAudioFile] = useState<File | null>(null);
-  const [audioMode, setAudioMode] = useState<"tts" | "upload">("tts");
+  const [audioMode, setAudioMode] = useState<"tts" | "upload" | "library">("tts");
+  const [musicTracks, setMusicTracks] = useState<MusicTrack[]>([]);
+  const [selectedMusic, setSelectedMusic] = useState("");
+  const [musicVolume, setMusicVolume] = useState(80);
+  const [language, setLanguage] = useState<"mandarin" | "cantonese">("mandarin");
+  const [batchLanguage, setBatchLanguage] = useState(false);
 
   /* ── 批量创建相关状态 ── */
   const [batchMode, setBatchMode] = useState(false);
@@ -96,6 +84,10 @@ export default function ProjectWorkbench() {
 
   useEffect(() => { load(); }, [load]);
 
+  useEffect(() => {
+    api.listMusic().then((data) => setMusicTracks(data.tracks)).catch(() => {});
+  }, []);
+
   /* ── 单个创建（保持现有流程不变） ── */
   const handleCreateJob = async () => {
     if (!id) return;
@@ -105,6 +97,10 @@ export default function ProjectWorkbench() {
         platforms,
         name: jobName || undefined,
         manual_script: scriptMode === "manual" ? manualScript : "",
+        audio_source: audioMode,
+        music_track_path: audioMode === "library" ? selectedMusic : "",
+        music_volume: audioMode === "library" ? musicVolume : 80,
+        language: language,
       });
       if (audioMode === "upload" && audioFile) {
         await api.uploadJobAudio(job.job_id, audioFile);
@@ -125,6 +121,10 @@ export default function ProjectWorkbench() {
         name: c.name || `${product} #${String(i + 1).padStart(3, "0")}`,
         manual_script: c.scriptMode === "manual" ? c.manualScript : "",
         skip_subtitle: c.skipSubtitle,
+        audio_source: c.audioMode,
+        music_track_path: c.audioMode === "library" ? c.musicPath : "",
+        music_volume: c.audioMode === "library" ? c.musicVolume : 80,
+        language: c.language,
       })) });
       load();
     } catch (e) {
@@ -139,6 +139,14 @@ export default function ProjectWorkbench() {
     setBatchConfigs((prev) =>
       prev.map((c, i) => (i === index ? { ...c, ...partial } : c)),
     );
+  }
+
+  function handleScriptsUpload(scripts: string[]) {
+    setBatchConfigs((prev) => {
+      const merged = applyScriptSplit(scripts, prev);
+      setBatchCount(merged.length);
+      return merged;
+    });
   }
 
   const handleRetry = async (jobId: string) => {
@@ -210,14 +218,30 @@ export default function ProjectWorkbench() {
             批量创建
           </label>
           {batchMode && (
-            <label className="flex items-center gap-1.5 text-sm cursor-pointer ml-4">
-              <input
-                type="checkbox"
-                checked={autoApprove}
-                onChange={(e) => setAutoApprove(e.target.checked)}
-              />
-              全自动（跳过审核）
-            </label>
+            <>
+              <label className="flex items-center gap-1.5 text-sm cursor-pointer ml-4">
+                <input
+                  type="checkbox"
+                  checked={autoApprove}
+                  onChange={(e) => setAutoApprove(e.target.checked)}
+                />
+                全自动（跳过审核）
+              </label>
+              <label className="flex items-center gap-1.5 text-sm cursor-pointer ml-2">
+                <input
+                  type="checkbox"
+                  checked={batchLanguage}
+                  onChange={(e) => {
+                    setBatchLanguage(e.target.checked);
+                    const lang = e.target.checked ? "cantonese" : "mandarin";
+                    setBatchConfigs((prev) =>
+                      prev.map((c) => ({ ...c, language: lang as "mandarin" | "cantonese" })),
+                    );
+                  }}
+                />
+                粤语版
+              </label>
+            </>
           )}
         </div>
 
@@ -283,6 +307,9 @@ export default function ProjectWorkbench() {
                   className="border rounded-lg px-3 py-2 text-sm"
                 />
               </label>
+              <div className="flex items-end pb-1">
+                <BatchScriptUploader onScripts={handleScriptsUpload} />
+              </div>
             </div>
 
             {/* 每个 Job 的独立配置卡片 */}
@@ -306,6 +333,16 @@ export default function ProjectWorkbench() {
                       onChange={(e) => updateBatchConfig(i, { skipSubtitle: e.target.checked })}
                     />
                     跳过字幕
+                  </label>
+                  <label className="flex items-center gap-1.5 text-sm cursor-pointer ml-2">
+                    <input
+                      type="checkbox"
+                      checked={c.language === "cantonese"}
+                      onChange={(e) =>
+                        updateBatchConfig(i, { language: e.target.checked ? "cantonese" : "mandarin" })
+                      }
+                    />
+                    粤语
                   </label>
                 </div>
 
@@ -361,6 +398,15 @@ export default function ProjectWorkbench() {
                     />
                     上传音频
                   </label>
+                  <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+                    <input
+                      type="radio"
+                      name={`batchAudioMode-${i}`}
+                      checked={c.audioMode === "library"}
+                      onChange={() => updateBatchConfig(i, { audioMode: "library" })}
+                    />
+                    音乐库
+                  </label>
                 </div>
                 {c.audioMode === "upload" && (
                   <div className="flex items-center gap-3">
@@ -378,6 +424,53 @@ export default function ProjectWorkbench() {
                     {c.audioFile && (
                       <span className="text-xs text-green-600">&#10003; 已选择</span>
                     )}
+                  </div>
+                )}
+                {c.audioMode === "library" && (
+                  <div className="flex items-center gap-3 flex-wrap mb-3">
+                    <select
+                      className="border rounded-lg px-3 py-1.5 text-sm min-w-[200px]"
+                      value={c.musicPath}
+                      onChange={(e) => updateBatchConfig(i, { musicPath: e.target.value })}
+                    >
+                      <option value="">-- 选择背景音乐 --</option>
+                      {musicTracks.map((t) => (
+                        <option key={t.relative_path} value={t.relative_path}>
+                          {t.filename}
+                          {t.duration_seconds != null
+                            ? ` (${Math.floor(t.duration_seconds)}s)`
+                            : ""}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      className="text-xs border rounded px-2 py-1.5 hover:bg-gray-50"
+                      onClick={() => {
+                        if (musicTracks.length === 0) return;
+                        const pick = musicTracks[Math.floor(Math.random() * musicTracks.length)];
+                        updateBatchConfig(i, { musicPath: pick.relative_path });
+                      }}
+                    >
+                      🎲 随机
+                    </button>
+                    {musicTracks.length === 0 && (
+                      <span className="text-xs text-gray-400">
+                        音乐库为空，请将音频文件放入 workspace/music_library/
+                      </span>
+                    )}
+                    <label className="flex items-center gap-2 text-xs text-[#59636e] ml-4">
+                      音量
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        value={c.musicVolume}
+                        onChange={(e) => updateBatchConfig(i, { musicVolume: Number(e.target.value) })}
+                        className="w-24"
+                      />
+                      <span className="w-8 text-right">{c.musicVolume}%</span>
+                    </label>
                   </div>
                 )}
               </div>
@@ -419,6 +512,14 @@ export default function ProjectWorkbench() {
                   />
                   手动输入
                 </label>
+                <label className="flex items-center gap-1.5 text-sm cursor-pointer ml-4">
+                  <input
+                    type="checkbox"
+                    checked={language === "cantonese"}
+                    onChange={(e) => setLanguage(e.target.checked ? "cantonese" : "mandarin")}
+                  />
+                  粤语版
+                </label>
               </div>
               {scriptMode === "manual" && (
                 <textarea
@@ -452,6 +553,15 @@ export default function ProjectWorkbench() {
                   />
                   上传音频
                 </label>
+                <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="audioMode"
+                    checked={audioMode === "library"}
+                    onChange={() => setAudioMode("library")}
+                  />
+                  音乐库
+                </label>
               </div>
               {audioMode === "upload" && (
                 <div className="flex items-center gap-3">
@@ -467,6 +577,53 @@ export default function ProjectWorkbench() {
                   {audioFile && (
                     <span className="text-xs text-green-600">&#10003; 已选择</span>
                   )}
+                </div>
+              )}
+              {audioMode === "library" && (
+                <div className="flex items-center gap-3 flex-wrap">
+                  <select
+                    className="border rounded-lg px-3 py-1.5 text-sm min-w-[200px]"
+                    value={selectedMusic}
+                    onChange={(e) => setSelectedMusic(e.target.value)}
+                  >
+                    <option value="">-- 选择背景音乐 --</option>
+                    {musicTracks.map((t) => (
+                      <option key={t.relative_path} value={t.relative_path}>
+                        {t.filename}
+                        {t.duration_seconds != null
+                          ? ` (${Math.floor(t.duration_seconds)}s)`
+                          : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    className="text-xs border rounded px-2 py-1.5 hover:bg-gray-50"
+                    onClick={() => {
+                      if (musicTracks.length === 0) return;
+                      const pick = musicTracks[Math.floor(Math.random() * musicTracks.length)];
+                      setSelectedMusic(pick.relative_path);
+                    }}
+                  >
+                    🎲 随机
+                  </button>
+                  {musicTracks.length === 0 && (
+                    <span className="text-xs text-gray-400">
+                      音乐库为空，请将音频文件放入 workspace/music_library/
+                    </span>
+                  )}
+                  <label className="flex items-center gap-2 text-xs text-[#59636e] ml-4">
+                    音量
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={musicVolume}
+                      onChange={(e) => setMusicVolume(Number(e.target.value))}
+                      className="w-24"
+                    />
+                    <span className="w-8 text-right">{musicVolume}%</span>
+                  </label>
                 </div>
               )}
             </div>

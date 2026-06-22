@@ -54,8 +54,8 @@ class SpyScriptBridge:
     def __init__(self) -> None:
         self.generate_calls: list[dict] = []
 
-    def generate(self, product: str, output_dir: Path, mock: bool) -> dict[str, Any]:
-        self.generate_calls.append({"product": product, "output_dir": str(output_dir), "mock": mock})
+    def generate(self, product: str, output_dir: Path, mock: bool, language: str = "mandarin") -> dict[str, Any]:
+        self.generate_calls.append({"product": product, "output_dir": str(output_dir), "mock": mock, "language": language})
         txt_path = output_dir / "stub_script.txt"
         json_path = output_dir / "stub_script.json"
         txt_path.write_text("测试文案 stub\n", encoding="utf-8")
@@ -87,6 +87,8 @@ class SpyMediaBridge:
         srt_path: Path,
         final_video_path: Path,
         cover_clip_path: Path | None,
+        music_path: Path | None = None,
+        music_volume: int = 80,
     ) -> None:
         final_video_path.write_bytes(b"\x00" * 512)
 
