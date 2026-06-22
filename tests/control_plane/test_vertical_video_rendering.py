@@ -101,12 +101,17 @@ def test_final_review_allows_missing_srt_when_skip_subtitle_is_enabled(monkeypat
             srt_path: Path | None = None,
             final_video_path: Path | None = None,
             cover_clip_path: Path | None = None,
+            cover_title: dict | None = None,
+            music_path: Path | None = None,
+            music_volume: int = 80,
         ) -> None:
             captured["base_video_path"] = base_video_path
             captured["audio_path"] = audio_path
             captured["srt_path"] = srt_path
             captured["final_video_path"] = final_video_path
             captured["cover_clip_path"] = cover_clip_path
+            captured["music_path"] = music_path
+            captured["music_volume"] = music_volume
             assert final_video_path is not None
             final_video_path.write_bytes(b"final")
 

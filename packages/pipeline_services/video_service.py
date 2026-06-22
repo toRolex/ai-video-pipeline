@@ -203,6 +203,8 @@ class VideoService:
         final_video_path: Path,
         cover_clip_path: Path | None = None,
         cover_title: dict | None = None,
+        music_path: Path | None = None,
+        music_volume: int = 80,
     ) -> None:
         """烧录最终视频：拼接封面、混音、可选字幕与封面标题。
 
@@ -213,6 +215,8 @@ class VideoService:
             final_video_path: 最终输出路径。
             cover_clip_path: 封面片段路径（None 时不拼接封面）。
             cover_title: 封面标题数据，包含 text/highlight_words/style；视频不足 3 秒时跳过。
+            music_path: 背景音乐路径（None 时不混音）。
+            music_volume: 背景音乐音量百分比 0-100（默认 80）。
         """
         final_video_path.parent.mkdir(parents=True, exist_ok=True)
         if self.dry_run:
@@ -249,6 +253,13 @@ class VideoService:
             "-c:v", "libx264", "-preset", "medium", "-crf", "23", "-pix_fmt", "yuv420p",
         ]
 
+        # Background music mixing
+        music_audio_filter = ""
+        if music_path is not None:
+            voice_duration = get_media_duration(audio_path)
+            fade_start = max(0, voice_duration - 1.5)
+            music_vol = music_volume / 100.0
+
         if cover_clip_path and cover_clip_path.exists():
             width, height = get_video_size(base_video_path)
             filter_complex = (
@@ -265,28 +276,57 @@ class VideoService:
                 )
             else:
                 filter_complex += ";[cv]null[v]"
-            cmd = [
-                ffmpeg,
-                "-i", str(cover_clip_path),
-                "-i", str(base_video_path),
-                "-i", str(audio_path),
-                "-filter_complex", filter_complex,
-                "-map", "[v]",
-                "-map", "2:a:0",
-                *encoder_args,
-                "-c:a", "aac",
-                "-b:a", "192k",
-                "-shortest",
-                "-movflags", "+faststart",
-                "-y",
-                str(final_video_path),
-            ]
+
+            if music_path is not None:
+                filter_complex += (
+                    f";[2:a]volume=1.0[va];"
+                    f"[3:a]volume={music_vol:.2f},afade=t=out:st={fade_start:.3f}:d=1.5[ma];"
+                    f"[va][ma]amix=inputs=2:duration=first:dropout_transition=0[amix]"
+                )
+                cmd = [
+                    ffmpeg,
+                    "-i", str(cover_clip_path),
+                    "-i", str(base_video_path),
+                    "-i", str(audio_path),
+                    "-stream_loop", "-1",
+                    "-i", str(music_path),
+                    "-filter_complex", filter_complex,
+                    "-map", "[v]",
+                    "-map", "[amix]",
+                    *encoder_args,
+                    "-c:a", "aac",
+                    "-b:a", "192k",
+                    "-shortest",
+                    "-movflags", "+faststart",
+                    "-y",
+                    str(final_video_path),
+                ]
+            else:
+                cmd = [
+                    ffmpeg,
+                    "-i", str(cover_clip_path),
+                    "-i", str(base_video_path),
+                    "-i", str(audio_path),
+                    "-filter_complex", filter_complex,
+                    "-map", "[v]",
+                    "-map", "2:a:0",
+                    *encoder_args,
+                    "-c:a", "aac",
+                    "-b:a", "192k",
+                    "-shortest",
+                    "-movflags", "+faststart",
+                    "-y",
+                    str(final_video_path),
+                ]
         else:
             cmd = [
                 ffmpeg,
                 "-i", str(base_video_path),
                 "-i", str(audio_path),
             ]
+            if music_path is not None:
+                cmd.extend(["-stream_loop", "-1", "-i", str(music_path)])
+                music_input_idx = 2  # 0=base, 1=audio, 2=music
             if cover_title_ass is not None:
                 ass_ffmpeg = _format_ass_path_for_ffmpeg(cover_title_ass)
                 if has_subtitles:
@@ -294,23 +334,55 @@ class VideoService:
                         f"[0:v]subtitles='{ass_ffmpeg}':force_style='Fontname=sans-serif'[v];"
                         f"[v]subtitles='{srt_ffmpeg}':force_style='{subtitle_style}'[out]"
                     )
-                    cmd.extend(["-filter_complex", filter_complex, "-map", "[out]", "-map", "1:a:0"])
+                else:
+                    filter_complex = (
+                        f"[0:v]subtitles='{ass_ffmpeg}':force_style='Fontname=sans-serif'[v]"
+                    )
+                if music_path is not None:
+                    filter_complex += (
+                        f";[1:a]volume=1.0[va];"
+                        f"[{music_input_idx}:a]volume={music_vol:.2f},afade=t=out:st={fade_start:.3f}:d=1.5[ma];"
+                        f"[va][ma]amix=inputs=2:duration=first:dropout_transition=0[amix]"
+                    )
+                    cmd.extend(["-filter_complex", filter_complex])
+                    video_label = "[out]" if has_subtitles else "[v]"
+                    cmd.extend(["-map", video_label, "-map", "[amix]"])
+                else:
+                    if has_subtitles:
+                        cmd.extend(["-filter_complex", filter_complex, "-map", "[out]", "-map", "1:a:0"])
+                    else:
+                        cmd.extend([
+                            "-vf",
+                            f"subtitles='{ass_ffmpeg}':force_style='Fontname=sans-serif'",
+                            "-map", "0:v:0",
+                            "-map", "1:a:0",
+                        ])
+            elif has_subtitles:
+                if music_path is not None:
+                    filter_complex = (
+                        f"[0:v]subtitles='{srt_ffmpeg}':force_style='{subtitle_style}'[v];"
+                        f"[1:a]volume=1.0[va];"
+                        f"[{music_input_idx}:a]volume={music_vol:.2f},afade=t=out:st={fade_start:.3f}:d=1.5[ma];"
+                        f"[va][ma]amix=inputs=2:duration=first:dropout_transition=0[amix]"
+                    )
+                    cmd.extend(["-filter_complex", filter_complex, "-map", "[v]", "-map", "[amix]"])
                 else:
                     cmd.extend([
                         "-vf",
-                        f"subtitles='{ass_ffmpeg}':force_style='Fontname=sans-serif'",
+                        f"subtitles='{srt_ffmpeg}':force_style='{subtitle_style}'",
                         "-map", "0:v:0",
                         "-map", "1:a:0",
                     ])
-            elif has_subtitles:
-                cmd.extend([
-                    "-vf",
-                    f"subtitles='{srt_ffmpeg}':force_style='{subtitle_style}'",
-                    "-map", "0:v:0",
-                    "-map", "1:a:0",
-                ])
             else:
-                cmd.extend(["-map", "0:v:0", "-map", "1:a:0"])
+                if music_path is not None:
+                    filter_complex = (
+                        f"[1:a]volume=1.0[va];"
+                        f"[{music_input_idx}:a]volume={music_vol:.2f},afade=t=out:st={fade_start:.3f}:d=1.5[ma];"
+                        f"[va][ma]amix=inputs=2:duration=first:dropout_transition=0[amix]"
+                    )
+                    cmd.extend(["-filter_complex", filter_complex, "-map", "0:v:0", "-map", "[amix]"])
+                else:
+                    cmd.extend(["-map", "0:v:0", "-map", "1:a:0"])
             cmd.extend([
                 *encoder_args,
                 "-c:a", "aac",

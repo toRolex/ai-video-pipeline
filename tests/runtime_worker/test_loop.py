@@ -87,6 +87,8 @@ class SpyMediaBridge:
         srt_path: Path,
         final_video_path: Path,
         cover_clip_path: Path | None,
+        music_path: Path | None = None,
+        music_volume: int = 80,
     ) -> None:
         final_video_path.write_bytes(b"\x00" * 512)
 

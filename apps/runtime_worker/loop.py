@@ -76,10 +76,15 @@ class _DefaultMediaBridge:
         srt_path: Path | None = None,
         final_video_path: Path | None = None,
         cover_clip_path: Path | None = None,
+        music_path: Path | None = None,
+        music_volume: int = 80,
     ) -> None:
         if final_video_path is None:
             raise TypeError("final_video_path is required")
-        self._video_svc.burn_final_video(base_video_path, audio_path, srt_path, final_video_path, cover_clip_path)
+        self._video_svc.burn_final_video(
+            base_video_path, audio_path, srt_path, final_video_path,
+            cover_clip_path, music_path=music_path, music_volume=music_volume,
+        )
 
 
 class WorkerLoop:
@@ -115,6 +120,8 @@ class WorkerLoop:
 
         manual_script = command.get("manual_script", "")
         uploaded_audio_path = command.get("uploaded_audio_path", "")
+        music_track_path = command.get("music_track_path", "")
+        music_volume = command.get("music_volume", 80)
 
         if manual_script:
             final_script = manual_script
@@ -147,6 +154,12 @@ class WorkerLoop:
         # Use selected_clips.json if available (semantic retrieval path)
         use_legacy = True
         clip_list_path = job_dir / "selected_clips.json"
+        # Resolve music path from root_dir
+        music_path: Path | None = None
+        if music_track_path:
+            music_path = Path.cwd() / music_track_path
+            if not music_path.exists():
+                music_path = None
         if clip_list_path.exists():
             import json as _json
             selected = _json.loads(clip_list_path.read_text(encoding="utf-8"))
@@ -163,13 +176,19 @@ class WorkerLoop:
                     },
                     base_video_path,
                 )
-                self.media_bridge.burn_final_video(base_video_path, audio_path, srt_path, final_video_path, cover_clip_path=None)
+                self.media_bridge.burn_final_video(
+                    base_video_path, audio_path, srt_path, final_video_path,
+                    cover_clip_path=None, music_path=music_path, music_volume=music_volume,
+                )
 
         if use_legacy:
             # Fallback: use legacy bridge for both build and burn
             base_video_path = job_dir / "base.mp4"
             self.media_bridge.build_base_video(project_dir, {"job_id": command["job_id"], "asset_bundle": {"audio_path": str(audio_path)}, "sequence": 1}, base_video_path)
-            self.media_bridge.burn_final_video(base_video_path, audio_path, srt_path, final_video_path, cover_clip_path=None)
+            self.media_bridge.burn_final_video(
+                base_video_path, audio_path, srt_path, final_video_path,
+                cover_clip_path=None, music_path=music_path, music_volume=music_volume,
+            )
 
         self.schedule_bridge.add(
             job_id=command["job_id"],

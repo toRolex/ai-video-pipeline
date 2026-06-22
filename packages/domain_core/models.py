@@ -70,6 +70,8 @@ class JobRecord(BaseModel):
     auto_approve: bool = False
     language: Language = "mandarin"
     cover_title: CoverTitle = Field(default_factory=CoverTitle)
+    music_track_path: str = ""
+    music_volume: int = 80
 
 
 class WorkerLease(BaseModel):

@@ -16,6 +16,8 @@ class QueuedTask:
     audio_source: str = "tts"
     language: str = "mandarin"
     cover_title: dict[str, object] = field(default_factory=dict)
+    music_track_path: str = ""
+    music_volume: int = 80
 
 
 class Dispatcher:
@@ -32,6 +34,8 @@ class Dispatcher:
         audio_source: str = "tts",
         language: str = "mandarin",
         cover_title: dict[str, object] | None = None,
+        music_track_path: str = "",
+        music_volume: int = 80,
     ) -> None:
         self.queue.append(
             QueuedTask(
@@ -43,6 +47,8 @@ class Dispatcher:
                 audio_source=audio_source,
                 language=language,
                 cover_title=cover_title or {},
+                music_track_path=music_track_path,
+                music_volume=music_volume,
             )
         )
 
@@ -82,6 +88,8 @@ class Dispatcher:
             "audio_source": task.audio_source,
             "language": task.language,
             "cover_title": task.cover_title,
+            "music_track_path": task.music_track_path,
+            "music_volume": task.music_volume,
         }
 
     def accept_report(self, task_id: str, attempt_id: str, lease_id: str) -> bool:

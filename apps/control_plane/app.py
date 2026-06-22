@@ -255,9 +255,17 @@ def _phase_to_artifacts(phase: str, job_id: str, project_dir: Path, root_dir: Pa
         srt_path = job_dir / "subtitles.srt"
         job_json_path = project_dir / "control" / "jobs" / f"{job_id}.json"
         skip_subtitle = False
+        music_path: Path | None = None
+        music_volume = 80
         if job_json_path.exists():
             job_data = json.loads(job_json_path.read_text(encoding="utf-8"))
             skip_subtitle = job_data.get("skip_subtitle", False)
+            music_track = job_data.get("music_track_path", "")
+            music_volume = job_data.get("music_volume", 80)
+            if music_track:
+                music_path = root_dir / music_track
+                if not music_path.exists():
+                    music_path = None
         actual_srt_path = None if skip_subtitle else srt_path
         if base_path.exists() and audio_path.exists() and (skip_subtitle or srt_path.exists()):
             video_svc.burn_final_video(
@@ -266,6 +274,8 @@ def _phase_to_artifacts(phase: str, job_id: str, project_dir: Path, root_dir: Pa
                 actual_srt_path,
                 final_path,
                 cover_clip_path=None,
+                music_path=music_path,
+                music_volume=music_volume,
             )
         if final_path.exists():
             rel = _to_url_path(final_path, workspace_dir)

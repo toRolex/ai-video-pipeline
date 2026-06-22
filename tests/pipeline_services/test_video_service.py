@@ -365,3 +365,124 @@ class TestVideoServiceCoverTitle:
         call_args = mock_run.call_args[0][0]
         joined = " ".join(call_args)
         assert "subtitles" not in joined
+
+
+class TestVideoServiceMusicMix:
+    """Tests for burn_final_video with background music mixing."""
+
+    def _make_service(self):
+        return VideoService(dry_run=False)
+
+    @patch("packages.pipeline_services.video_service.get_ffmpeg_path", return_value="ffmpeg")
+    @patch("packages.pipeline_services.video_service.get_media_duration", return_value=10.0)
+    @patch("packages.pipeline_services.video_service.subprocess.run")
+    def test_burn_with_music_includes_amix_afade_and_stream_loop(
+        self, mock_run, mock_duration, mock_ffmpeg, tmp_path
+    ):
+        """Background music path triggers amix + afade + stream_loop in FFmpeg command."""
+        mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+
+        base = tmp_path / "base.mp4"
+        audio = tmp_path / "audio.mp3"
+        music = tmp_path / "bgm.mp3"
+        final = tmp_path / "final.mp4"
+        base.write_bytes(b"fake")
+        audio.write_bytes(b"fake")
+        music.write_bytes(b"fake")
+
+        svc = self._make_service()
+        svc.burn_final_video(base, audio, None, final, music_path=music, music_volume=80)
+
+        call_args = mock_run.call_args[0][0]
+        joined = " ".join(call_args)
+        assert "-stream_loop" in call_args
+        assert str(music) in call_args
+        assert "amix" in joined
+        assert "afade=t=out" in joined
+
+    @patch("packages.pipeline_services.video_service.get_ffmpeg_path", return_value="ffmpeg")
+    @patch("packages.pipeline_services.video_service.get_media_duration", return_value=10.0)
+    @patch("packages.pipeline_services.video_service.subprocess.run")
+    def test_burn_with_music_volume_scaled(
+        self, mock_run, mock_duration, mock_ffmpeg, tmp_path
+    ):
+        """music_volume parameter is reflected as FFmpeg volume factor."""
+        mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+
+        base = tmp_path / "base.mp4"
+        audio = tmp_path / "audio.mp3"
+        music = tmp_path / "bgm.mp3"
+        final = tmp_path / "final.mp4"
+        base.write_bytes(b"fake")
+        audio.write_bytes(b"fake")
+        music.write_bytes(b"fake")
+
+        svc = self._make_service()
+        svc.burn_final_video(base, audio, None, final, music_path=music, music_volume=50)
+
+        call_args = mock_run.call_args[0][0]
+        joined = " ".join(call_args)
+        assert "amix=inputs=2" in joined
+        # music volume factor should be 0.50
+        assert "volume=0.50" in joined or "volume=0.5" in joined
+
+    @patch("packages.pipeline_services.video_service.get_ffmpeg_path", return_value="ffmpeg")
+    @patch("packages.pipeline_services.video_service.get_media_duration", return_value=10.0)
+    @patch("packages.pipeline_services.video_service.subprocess.run")
+    def test_burn_with_music_default_fade_duration(
+        self, mock_run, mock_duration, mock_ffmpeg, tmp_path
+    ):
+        """Fade-out duration defaults to 1.5s ending at voice duration."""
+        mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+
+        base = tmp_path / "base.mp4"
+        audio = tmp_path / "audio.mp3"
+        music = tmp_path / "bgm.mp3"
+        final = tmp_path / "final.mp4"
+        base.write_bytes(b"fake")
+        audio.write_bytes(b"fake")
+        music.write_bytes(b"fake")
+
+        svc = self._make_service()
+        svc.burn_final_video(base, audio, None, final, music_path=music)
+
+        call_args = mock_run.call_args[0][0]
+        joined = " ".join(call_args)
+        # fade starts at voice_duration - 1.5 = 8.5, with d=1.5
+        assert "afade=t=out:st=8.500:d=1.5" in joined
+
+    @patch("packages.pipeline_services.video_service.get_ffmpeg_path", return_value="ffmpeg")
+    @patch("packages.pipeline_services.video_service.subprocess.run")
+    def test_burn_without_music_no_amix(
+        self, mock_run, mock_ffmpeg, tmp_path
+    ):
+        """No music_path means no amix/afade/stream_loop in the command."""
+        mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+
+        base = tmp_path / "base.mp4"
+        audio = tmp_path / "audio.mp3"
+        final = tmp_path / "final.mp4"
+        base.write_bytes(b"fake")
+        audio.write_bytes(b"fake")
+
+        svc = self._make_service()
+        svc.burn_final_video(base, audio, None, final)
+
+        call_args = mock_run.call_args[0][0]
+        joined = " ".join(call_args)
+        assert "amix" not in joined
+        assert "afade" not in joined
+
+    def test_dry_run_burn_with_music_does_not_fail(self, tmp_path):
+        """Dry run with music_path writes stub and does not fail."""
+        svc = VideoService(dry_run=True)
+        base = tmp_path / "base.mp4"
+        audio = tmp_path / "audio.mp3"
+        music = tmp_path / "bgm.mp3"
+        final = tmp_path / "final.mp4"
+        base.write_bytes(b"fake")
+        audio.write_bytes(b"fake")
+        music.write_bytes(b"fake")
+
+        svc.burn_final_video(base, audio, None, final, music_path=music)
+        assert final.exists()

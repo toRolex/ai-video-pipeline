@@ -39,6 +39,8 @@ class CreateJobRequest(BaseModel):
     audio_source: AudioSource = "tts"
     language: Language = "mandarin"
     cover_title: CoverTitleRequest | None = None
+    music_track_path: str = ""
+    music_volume: int = 80
 
 
 class BatchJobItem(BaseModel):
@@ -48,6 +50,8 @@ class BatchJobItem(BaseModel):
     audio_source: AudioSource = "tts"
     language: Language = "mandarin"
     cover_title: CoverTitleRequest | None = None
+    music_track_path: str = ""
+    music_volume: int = 80
 
 
 class BatchCreateRequest(BaseModel):
@@ -93,6 +97,8 @@ def _make_job_response(record: JobRecord, display_index: str, platforms: list[st
         "auto_approve": record.auto_approve,
         "language": record.language,
         "cover_title": record.cover_title.model_dump(),
+        "music_track_path": record.music_track_path,
+        "music_volume": record.music_volume,
         "display_index": display_index,
     }
 
@@ -109,6 +115,8 @@ def create_job(request: Request, project_id: str, payload: CreateJobRequest):
         audio_source=payload.audio_source,
         language=payload.language,
         cover_title=_cover_title_from_request(payload.cover_title).model_dump(),
+        music_track_path=payload.music_track_path,
+        music_volume=payload.music_volume,
     )
     repo = FileStoreRepository(request.app.state.root_dir)
     record = JobRecord(
@@ -125,6 +133,8 @@ def create_job(request: Request, project_id: str, payload: CreateJobRequest):
         auto_approve=payload.auto_approve,
         language=payload.language,
         cover_title=_cover_title_from_request(payload.cover_title),
+        music_track_path=payload.music_track_path,
+        music_volume=payload.music_volume,
     )
     repo.save_job(project_id, record)
 
@@ -153,6 +163,8 @@ def create_jobs_batch(request: Request, project_id: str, payload: BatchCreateReq
             audio_source=item.audio_source,
             language=item.language,
             cover_title=cover_title.model_dump(),
+            music_track_path=item.music_track_path,
+            music_volume=item.music_volume,
         )
         record = JobRecord(
             job_id=job_id,
@@ -168,6 +180,8 @@ def create_jobs_batch(request: Request, project_id: str, payload: BatchCreateReq
             auto_approve=payload.auto_approve,
             language=item.language,
             cover_title=cover_title,
+            music_track_path=item.music_track_path,
+            music_volume=item.music_volume,
         )
         repo.save_job(project_id, record)
         display_index = f"{existing_count + i + 1:03d}"
