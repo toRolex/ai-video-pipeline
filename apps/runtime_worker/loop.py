@@ -154,7 +154,7 @@ class WorkerLoop:
         # Use selected_clips.json if available (semantic retrieval path)
         use_legacy = True
         clip_list_path = job_dir / "selected_clips.json"
-        # Resolve music path from root_dir
+        # Resolve music path relative to cwd
         music_path: Path | None = None
         if music_track_path:
             music_path = Path.cwd() / music_track_path

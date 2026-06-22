@@ -121,6 +121,24 @@ def _format_ass_path_for_ffmpeg(ass_path: Path) -> str:
     return str(ass_path).replace("\\", "/").replace(":", "\\:").replace("'", "\\'")
 
 
+def _make_music_mix_filter(
+    voice_input_idx: int,
+    music_input_idx: int,
+    music_vol: float,
+    fade_start: float,
+    fade_duration: float = 1.5,
+) -> str:
+    """Generate FFmpeg filter_complex fragment for background music mixing.
+
+    Mixes voice audio with looped background music that fades out near the end.
+    """
+    return (
+        f"[{voice_input_idx}:a]volume=1.0[va];"
+        f"[{music_input_idx}:a]volume={music_vol:.2f},afade=t=out:st={fade_start:.3f}:d={fade_duration}[ma];"
+        f"[va][ma]amix=inputs=2:duration=first:dropout_transition=0[amix]"
+    )
+
+
 class VideoService:
     """视频组装与字幕烧录服务。
 
@@ -253,8 +271,6 @@ class VideoService:
             "-c:v", "libx264", "-preset", "medium", "-crf", "23", "-pix_fmt", "yuv420p",
         ]
 
-        # Background music mixing
-        music_audio_filter = ""
         if music_path is not None:
             voice_duration = get_media_duration(audio_path)
             fade_start = max(0, voice_duration - 1.5)
@@ -278,11 +294,7 @@ class VideoService:
                 filter_complex += ";[cv]null[v]"
 
             if music_path is not None:
-                filter_complex += (
-                    f";[2:a]volume=1.0[va];"
-                    f"[3:a]volume={music_vol:.2f},afade=t=out:st={fade_start:.3f}:d=1.5[ma];"
-                    f"[va][ma]amix=inputs=2:duration=first:dropout_transition=0[amix]"
-                )
+                filter_complex += f";{_make_music_mix_filter(2, 3, music_vol, fade_start)}"
                 cmd = [
                     ffmpeg,
                     "-i", str(cover_clip_path),
@@ -339,11 +351,7 @@ class VideoService:
                         f"[0:v]subtitles='{ass_ffmpeg}':force_style='Fontname=sans-serif'[v]"
                     )
                 if music_path is not None:
-                    filter_complex += (
-                        f";[1:a]volume=1.0[va];"
-                        f"[{music_input_idx}:a]volume={music_vol:.2f},afade=t=out:st={fade_start:.3f}:d=1.5[ma];"
-                        f"[va][ma]amix=inputs=2:duration=first:dropout_transition=0[amix]"
-                    )
+                    filter_complex += f";{_make_music_mix_filter(1, music_input_idx, music_vol, fade_start)}"
                     cmd.extend(["-filter_complex", filter_complex])
                     video_label = "[out]" if has_subtitles else "[v]"
                     cmd.extend(["-map", video_label, "-map", "[amix]"])
@@ -361,9 +369,7 @@ class VideoService:
                 if music_path is not None:
                     filter_complex = (
                         f"[0:v]subtitles='{srt_ffmpeg}':force_style='{subtitle_style}'[v];"
-                        f"[1:a]volume=1.0[va];"
-                        f"[{music_input_idx}:a]volume={music_vol:.2f},afade=t=out:st={fade_start:.3f}:d=1.5[ma];"
-                        f"[va][ma]amix=inputs=2:duration=first:dropout_transition=0[amix]"
+                        f"{_make_music_mix_filter(1, music_input_idx, music_vol, fade_start)}"
                     )
                     cmd.extend(["-filter_complex", filter_complex, "-map", "[v]", "-map", "[amix]"])
                 else:
@@ -375,11 +381,7 @@ class VideoService:
                     ])
             else:
                 if music_path is not None:
-                    filter_complex = (
-                        f"[1:a]volume=1.0[va];"
-                        f"[{music_input_idx}:a]volume={music_vol:.2f},afade=t=out:st={fade_start:.3f}:d=1.5[ma];"
-                        f"[va][ma]amix=inputs=2:duration=first:dropout_transition=0[amix]"
-                    )
+                    filter_complex = _make_music_mix_filter(1, music_input_idx, music_vol, fade_start)
                     cmd.extend(["-filter_complex", filter_complex, "-map", "0:v:0", "-map", "[amix]"])
                 else:
                     cmd.extend(["-map", "0:v:0", "-map", "1:a:0"])
