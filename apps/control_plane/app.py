@@ -28,6 +28,7 @@ from packages.pipeline_services.tts_provider import MiMoTTSProvider, QwenTTSProv
 from packages.provider_config.app_config import AppConfigManager
 from apps.control_plane.services.schedule_store import ScheduleStore
 from packages.pipeline_services.legacy_script_bridge import LegacyScriptBridge
+from packages.pipeline_services.phase_orchestrator import PhaseContext, PhaseOrchestrator
 from packages.pipeline_services.script_service.generator import ScriptGenerator
 
 
@@ -330,6 +331,15 @@ def _phase_to_artifacts(phase: str, job_id: str, project_dir: Path, root_dir: Pa
 
 async def _auto_tick(root_dir: Path):
     """Dev-mode background loop: scans disk for non-review jobs, generates stub artifacts, and advances them."""
+    # Construct orchestrator once; deps are stateless, reused across iterations
+    orchestrator = PhaseOrchestrator(
+        script_bridge=LegacyScriptBridge(root_dir),
+        subtitle_svc=SubtitleService(),
+        video_svc=VideoService(dry_run=False),
+        tts_provider=None,
+        schedule_store=ScheduleStore(root_dir),
+    )
+
     while True:
         await asyncio.sleep(AUTO_TICK_INTERVAL)
         try:
@@ -384,7 +394,21 @@ async def _auto_tick(root_dir: Path):
                         product = data.get("product", os.environ.get("PRODUCT", "荔枝菌"))
                         manual_script = data.get("manual_script", "")
                         uploaded_audio_path = data.get("uploaded_audio_path", "")
-                        artifacts = _phase_to_artifacts(target, job_id, project_dir, root_dir, product, manual_script, uploaded_audio_path)
+
+                        if target == "script_generating":
+                            ctx = PhaseContext(
+                                job_id=job_id,
+                                project_dir=project_dir,
+                                root_dir=root_dir,
+                                product=product,
+                                options={"manual_script": manual_script},
+                            )
+                            artifacts = [
+                                a.model_dump()
+                                for a in orchestrator.run_phase(target, ctx)
+                            ]
+                        else:
+                            artifacts = _phase_to_artifacts(target, job_id, project_dir, root_dir, product, manual_script, uploaded_audio_path)
 
                         # Merge artifacts (keep existing, add new ones)
                         existing = data.get("artifacts", [])
