@@ -188,11 +188,7 @@ def test_auto_tick_skips_subtitle_phase_when_skip_subtitle_is_enabled(monkeypatc
             return
         raise asyncio.CancelledError()
 
-    def fail_phase_to_artifacts(*args, **kwargs):
-        raise AssertionError("_phase_to_artifacts should not be called when skip_subtitle=True")
-
     monkeypatch.setattr("apps.control_plane.app.asyncio.sleep", fake_sleep)
-    monkeypatch.setattr("apps.control_plane.app._phase_to_artifacts", fail_phase_to_artifacts)
 
     with pytest.raises(asyncio.CancelledError):
         asyncio.run(_auto_tick(root_dir))
@@ -228,11 +224,7 @@ def test_auto_tick_auto_approves_review_gates(monkeypatch, tmp_path: Path) -> No
             return
         raise asyncio.CancelledError()
 
-    def fail_phase_to_artifacts(*args, **kwargs):
-        raise AssertionError("_phase_to_artifacts should not be called when auto_approve=True")
-
     monkeypatch.setattr("apps.control_plane.app.asyncio.sleep", fake_sleep)
-    monkeypatch.setattr("apps.control_plane.app._phase_to_artifacts", fail_phase_to_artifacts)
 
     with pytest.raises(asyncio.CancelledError):
         asyncio.run(_auto_tick(root_dir))

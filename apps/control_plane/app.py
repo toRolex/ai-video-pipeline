@@ -34,20 +34,6 @@ REVIEW_PHASES = {"script_review", "tts_review", "asset_review", "final_review"}
 AUTO_TICK_INTERVAL = 3  # seconds between auto-advances in dev mode
 
 
-def _to_url_path(path: Path, workspace_dir: Path) -> str:
-    """Convert a workspace-relative Path to a URL-safe forward-slash path."""
-    return path.relative_to(workspace_dir).as_posix()
-
-
-def _phase_to_artifacts(phase: str, job_id: str, project_dir: Path, root_dir: Path, product: str, manual_script: str = "", uploaded_audio_path: str = "") -> list[dict]:
-    """DEPRECATED — all branches migrated to PhaseOrchestrator.
-
-    Kept temporarily for reference.  All callers now use ``orchestrator.run_phase()``.
-    Will be removed in Task 8 (cleanup).
-    """
-    return []
-
-
 async def _auto_tick(root_dir: Path):
     """Dev-mode background loop: scans disk for non-review jobs, generates stub artifacts, and advances them."""
     # Construct orchestrator once; deps are stateless, reused across iterations
