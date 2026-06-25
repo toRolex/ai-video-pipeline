@@ -87,6 +87,7 @@ class SpyMediaBridge:
         srt_path: Path,
         final_video_path: Path,
         cover_clip_path: Path | None,
+        cover_title: dict | None = None,
         music_path: Path | None = None,
         music_volume: int = 80,
     ) -> None:

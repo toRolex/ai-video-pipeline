@@ -28,6 +28,7 @@ from packages.pipeline_services.tts_provider import MiMoTTSProvider, QwenTTSProv
 from packages.provider_config.app_config import AppConfigManager
 from apps.control_plane.services.schedule_store import ScheduleStore
 from packages.pipeline_services.legacy_script_bridge import LegacyScriptBridge
+from packages.pipeline_services.script_service.generator import ScriptGenerator
 
 
 REVIEW_PHASES = {"script_review", "tts_review", "asset_review", "final_review"}
@@ -66,6 +67,33 @@ def _phase_to_artifacts(phase: str, job_id: str, project_dir: Path, root_dir: Pa
             if p.exists():
                 rel = _to_url_path(p, workspace_dir)
                 result.append({"kind": "script", "relative_path": rel, "url": f"/workspace/{rel}", "size_bytes": p.stat().st_size})
+
+        # Auto-generate cover title if not already set
+        job_json_path = project_dir / "control" / "jobs" / f"{job_id}.json"
+        if job_json_path.exists():
+            job_data = json.loads(job_json_path.read_text(encoding="utf-8"))
+            existing_ct = job_data.get("cover_title", {})
+            if not existing_ct or not existing_ct.get("text"):
+                try:
+                    script_text = script_result.get("final_script", "")
+                    if not script_text and txt_path.exists():
+                        script_text = txt_path.read_text(encoding="utf-8").strip()
+                    if script_text:
+                        app_config = AppConfigManager()
+                        llm_config = app_config.get_llm_config()
+
+                        class _CoverConfig:
+                            api_key = app_config.get_llm_api_key()
+                            base_url = app_config.get_llm_endpoint()
+                            model = llm_config.get("model", "deepseek-v4-pro")
+
+                        gen = ScriptGenerator(_CoverConfig())
+                        cover_title = gen.generate_cover_title(script_text, product, "滋元堂")
+                        job_data["cover_title"] = cover_title
+                        job_json_path.write_text(json.dumps(job_data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+                        print(f"[COVER_TITLE] Auto-generated: {cover_title['text']}", flush=True)
+                except Exception as e:
+                    print(f"[COVER_TITLE WARN] Failed to auto-generate: {e}", flush=True)
 
     elif phase == "tts_generating":
         audio_path = job_dir / "audio.mp3"
@@ -228,11 +256,17 @@ def _phase_to_artifacts(phase: str, job_id: str, project_dir: Path, root_dir: Pa
         audio_path = job_dir / "audio.mp3"
         clip_list_path = job_dir / "selected_clips.json"
 
-        if audio_path.exists() and clip_list_path.exists():
+        if not audio_path.exists():
+            print(f"[VIDEO WARN] audio.mp3 not found, skipping video composition for {job_id}", flush=True)
+        elif not clip_list_path.exists():
+            print(f"[VIDEO WARN] selected_clips.json not found for {job_id}", flush=True)
+        else:
             selected = json.loads(clip_list_path.read_text(encoding="utf-8"))
             selected = [item for item in selected if Path(item["file_path"]).exists()]
 
-            if selected:
+            if not selected:
+                print(f"[VIDEO WARN] no valid clips found after filtering for {job_id}", flush=True)
+            else:
                 base_path = job_dir / "base.mp4"
                 video_svc.build_base_video(
                     project_dir,
@@ -244,7 +278,9 @@ def _phase_to_artifacts(phase: str, job_id: str, project_dir: Path, root_dir: Pa
                     base_path,
                 )
 
-        if base_path.exists():
+        if not base_path.exists():
+            print(f"[VIDEO WARN] base.mp4 not produced for {job_id}", flush=True)
+        else:
             rel = _to_url_path(base_path, workspace_dir)
             result.append({"kind": "video_base", "relative_path": rel, "url": f"/workspace/{rel}", "size_bytes": base_path.stat().st_size})
 
@@ -258,12 +294,16 @@ def _phase_to_artifacts(phase: str, job_id: str, project_dir: Path, root_dir: Pa
         music_path: Path | None = None
         music_volume = 80
         platform = ""
+        cover_title_data: dict | None = None
         if job_json_path.exists():
             job_data = json.loads(job_json_path.read_text(encoding="utf-8"))
             skip_subtitle = job_data.get("skip_subtitle", False)
             music_track = job_data.get("music_track_path", "")
             music_volume = job_data.get("music_volume", 80)
             platform = job_data.get("platform", "")
+            ct = job_data.get("cover_title")
+            if ct and ct.get("text"):
+                cover_title_data = ct
             if music_track:
                 music_path = root_dir / music_track
                 if not music_path.exists():
@@ -276,6 +316,7 @@ def _phase_to_artifacts(phase: str, job_id: str, project_dir: Path, root_dir: Pa
                 actual_srt_path,
                 final_path,
                 cover_clip_path=None,
+                cover_title=cover_title_data,
                 music_path=music_path,
                 music_volume=music_volume,
             )
@@ -322,7 +363,7 @@ async def _auto_tick(root_dir: Path):
                                     data["phase"] = "completed"
                                 data["review_status"] = "approved"
                                 f.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-                                print(f"[AUTO-TICK] {job_id}: auto_approved {current} -> {data['phase']}")
+                                print(f"[AUTO-TICK] {job_id}: auto_approved {current} -> {data['phase']}", flush=True)
                                 continue
                             continue
 
@@ -336,7 +377,7 @@ async def _auto_tick(root_dir: Path):
                         if current == "subtitle_generating" and data.get("skip_subtitle", False):
                             data["phase"] = next_phase("subtitle_generating")
                             f.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-                            print(f"[AUTO-TICK] {job_id}: skip subtitle_generating -> {data['phase']}")
+                            print(f"[AUTO-TICK] {job_id}: skip subtitle_generating -> {data['phase']}", flush=True)
                             continue
 
                         # Execute real pipeline for the target phase
@@ -364,10 +405,18 @@ async def _auto_tick(root_dir: Path):
                                 data["phase"] = next_phase(target)
                             except ValueError:
                                 data["phase"] = "completed"
-                        elif target in ("subtitle_generating", "video_rendering"):
-                            # Critical phases: do NOT auto-advance on failure
+                        elif target == "video_rendering":
+                            # Video rendering failure: retry once, then mark as failed
+                            if "video_rendering" in data.get("last_error", ""):
+                                data["phase"] = "failed"
+                                print(f"[AUTO-TICK] {job_id}: video_rendering failed after retry, marking as failed", flush=True)
+                            else:
+                                print(f"[AUTO-TICK] {job_id}: video_rendering produced no artifacts, will retry next tick", flush=True)
+                                data["last_error"] = "video_rendering failed to produce artifacts"
+                        elif target == "subtitle_generating":
+                            # Critical phase: do NOT auto-advance on failure
                             # Stay in current phase and log the error
-                            print(f"[AUTO-TICK] {job_id}: {target} produced no artifacts, staying in phase")
+                            print(f"[AUTO-TICK] {job_id}: {target} produced no artifacts, staying in phase", flush=True)
                             data["last_error"] = f"{target} failed to produce artifacts"
                         else:
                             # No artifacts produced - auto-advance (transitional phase or error)
@@ -377,7 +426,7 @@ async def _auto_tick(root_dir: Path):
                                 data["phase"] = "completed"
 
                         f.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-                        print(f"[AUTO-TICK] {job_id}: {current} -> {data['phase']} (artifacts: {[a['kind'] for a in artifacts]})")
+                        print(f"[AUTO-TICK] {job_id}: {current} -> {data['phase']} (artifacts: {[a['kind'] for a in artifacts]})", flush=True)
 
                         review_path = project_dir / "reviews" / "review_events.jsonl"
                         review_path.parent.mkdir(parents=True, exist_ok=True)
