@@ -76,6 +76,7 @@ class _DefaultMediaBridge:
         srt_path: Path | None = None,
         final_video_path: Path | None = None,
         cover_clip_path: Path | None = None,
+        cover_title: dict | None = None,
         music_path: Path | None = None,
         music_volume: int = 80,
     ) -> None:
@@ -83,7 +84,7 @@ class _DefaultMediaBridge:
             raise TypeError("final_video_path is required")
         self._video_svc.burn_final_video(
             base_video_path, audio_path, srt_path, final_video_path,
-            cover_clip_path, music_path=music_path, music_volume=music_volume,
+            cover_clip_path, cover_title=cover_title, music_path=music_path, music_volume=music_volume,
         )
 
 
@@ -123,6 +124,7 @@ class WorkerLoop:
         music_track_path = command.get("music_track_path", "")
         music_volume = command.get("music_volume", 80)
         language = command.get("language", "mandarin")
+        cover_title = command.get("cover_title") or None
 
         if manual_script:
             final_script = manual_script
@@ -179,7 +181,7 @@ class WorkerLoop:
                 )
                 self.media_bridge.burn_final_video(
                     base_video_path, audio_path, srt_path, final_video_path,
-                    cover_clip_path=None, music_path=music_path, music_volume=music_volume,
+                    cover_clip_path=None, cover_title=cover_title, music_path=music_path, music_volume=music_volume,
                 )
 
         if use_legacy:
@@ -188,7 +190,7 @@ class WorkerLoop:
             self.media_bridge.build_base_video(project_dir, {"job_id": command["job_id"], "asset_bundle": {"audio_path": str(audio_path)}, "sequence": 1}, base_video_path)
             self.media_bridge.burn_final_video(
                 base_video_path, audio_path, srt_path, final_video_path,
-                cover_clip_path=None, music_path=music_path, music_volume=music_volume,
+                cover_clip_path=None, cover_title=cover_title, music_path=music_path, music_volume=music_volume,
             )
 
         self.schedule_bridge.add(
