@@ -343,13 +343,26 @@ class GenerateCoverTitleRequest(BaseModel):
     brand: str = "滋元堂"
 
 
+_COVER_TITLE_RATE_LIMIT: dict[str, float] = {}
+_COVER_TITLE_COOLDOWN = 3.0  # seconds
+
+
 @router.post("/api/cover-title/generate")
-def generate_cover_title(payload: GenerateCoverTitleRequest):
+def generate_cover_title(payload: GenerateCoverTitleRequest, request: Request):
+    import time
     from packages.provider_config.app_config import AppConfigManager
     from packages.pipeline_services.script_service.generator import ScriptGenerator
 
     if not payload.script_text.strip():
         raise HTTPException(status_code=400, detail="script_text is required")
+
+    client_ip = request.client.host if request.client else "unknown"
+    now = time.monotonic()
+    last = _COVER_TITLE_RATE_LIMIT.get(client_ip, 0)
+    if now - last < _COVER_TITLE_COOLDOWN:
+        raise HTTPException(status_code=429, detail=f"请 {_COVER_TITLE_COOLDOWN} 秒后再试")
+    _COVER_TITLE_RATE_LIMIT[client_ip] = now
+
     app_config = AppConfigManager()
     llm_config = app_config.get_llm_config()
 

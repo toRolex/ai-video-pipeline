@@ -39,6 +39,8 @@ export default function ProjectWorkbench() {
   const [batchLanguage, setBatchLanguage] = useState(false);
   const [coverTitleText, setCoverTitleText] = useState("");
   const [coverHighlightWords, setCoverHighlightWords] = useState("");
+  const [coverTitleCooldown, setCoverTitleCooldown] = useState(false);
+  const [batchCoverCooldown, setBatchCoverCooldown] = useState<Set<number>>(new Set());
 
   /* ── 批量创建相关状态 ── */
   const [batchMode, setBatchMode] = useState(false);
@@ -449,19 +451,22 @@ export default function ProjectWorkbench() {
                   <button
                     type="button"
                     className="text-xs border rounded px-2 py-1.5 hover:bg-gray-50 disabled:opacity-50"
-                    disabled={c.scriptMode === "auto" && !c.manualScript.trim()}
+                    disabled={c.scriptMode === "auto" && !c.manualScript.trim() || batchCoverCooldown.has(i)}
                     onClick={async () => {
                       const text = c.scriptMode === "manual" ? c.manualScript : "";
                       if (!text.trim()) return;
+                      setBatchCoverCooldown((prev) => new Set(prev).add(i));
                       try {
                         const res = await api.generateCoverTitle({ script_text: text, product });
                         updateBatchConfig(i, { coverTitleText: res.text, coverHighlightWords: res.highlight_words.join("，") });
                       } catch (e) {
                         console.error("generate cover title failed", e);
+                      } finally {
+                        setTimeout(() => setBatchCoverCooldown((prev) => { const next = new Set(prev); next.delete(i); return next; }), 5000);
                       }
                     }}
                   >
-                    {c.scriptMode === "auto" ? "需先输入文案才能生成" : "自动生成标题"}
+                    {batchCoverCooldown.has(i) ? "冷却中（5s）..." : c.scriptMode === "auto" ? "需先输入文案才能生成" : "自动生成标题"}
                   </button>
                 </div>
                 <div className="flex items-center gap-3 flex-wrap mb-3">
@@ -636,20 +641,23 @@ export default function ProjectWorkbench() {
                 <button
                   type="button"
                   className="text-xs border rounded px-2 py-1.5 hover:bg-gray-50 disabled:opacity-50"
-                  disabled={scriptMode === "auto" && !manualScript.trim()}
+                  disabled={scriptMode === "auto" && !manualScript.trim() || coverTitleCooldown}
                   onClick={async () => {
                     const text = scriptMode === "manual" ? manualScript : "";
                     if (!text.trim()) return;
+                    setCoverTitleCooldown(true);
                     try {
                       const res = await api.generateCoverTitle({ script_text: text, product });
                       setCoverTitleText(res.text);
                       setCoverHighlightWords(res.highlight_words.join("，"));
                     } catch (e) {
                       console.error("generate cover title failed", e);
+                    } finally {
+                      setTimeout(() => setCoverTitleCooldown(false), 5000);
                     }
                   }}
                 >
-                  {scriptMode === "auto" ? "需先输入文案才能生成" : "自动生成标题"}
+                  {coverTitleCooldown ? "冷却中（5s）..." : scriptMode === "auto" ? "需先输入文案才能生成" : "自动生成标题"}
                 </button>
               </div>
               <div className="flex items-center gap-3 flex-wrap">
