@@ -23,7 +23,7 @@ DEFAULT_COVER_STYLE = {
     "outline_color": "#000000",
     "highlight_color": "#FF0000",
     "outline_width": 2.0,
-    "position": "center",
+    "position": "top",
 }
 
 
@@ -53,7 +53,8 @@ def _render_cover_title_png(
 
     Returns the path to the generated PNG image.  The image has the same
     dimensions as the video so it can be directly composited with the
-    ``overlay`` filter.
+    ``overlay`` filter.  Font size auto-scales so text fits within 90% of
+    the video width; text wraps to two lines if needed.
     """
     from PIL import Image, ImageDraw, ImageFont
 
@@ -62,78 +63,110 @@ def _render_cover_title_png(
     outline_color = style.get("outline_color", DEFAULT_COVER_STYLE["outline_color"]).lstrip("#")
     position = style.get("position", DEFAULT_COVER_STYLE["position"])
 
-    font_size = max(int(video_height * 0.12), 48)
+    max_w = int(video_width * 0.9)  # 90% of video width, 5% margin each side
 
-    # Try to load a CJK-capable font; fall back to default
-    font = None
-    for fp in [
+    # Load a CJK-capable font at max size first, then auto-shrink
+    font_paths = [
         "/System/Library/Fonts/PingFang.ttc",
         "/System/Library/Fonts/STHeiti Medium.ttc",
         "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
         "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-    ]:
-        try:
-            font = ImageFont.truetype(fp, font_size)
-            break
-        except (OSError, IOError):
-            continue
-    if font is None:
-        font = ImageFont.load_default()
+    ]
 
-    # Build segments: (text, color_hex)
-    segments: list[tuple[str, str]] = []
-    remaining = text
-    for word in highlight_words:
-        if not word:
-            continue
-        idx = remaining.lower().find(word.lower())
-        if idx == -1:
-            continue
-        before = remaining[:idx]
-        matched = remaining[idx : idx + len(word)]
-        remaining = remaining[idx + len(word) :]
-        if before:
-            segments.append((before, primary))
-        segments.append((matched, highlight))
-    if remaining:
-        segments.append((remaining, primary))
+    def _load_font(size: int):
+        for fp in font_paths:
+            try:
+                return ImageFont.truetype(fp, size)
+            except (OSError, IOError):
+                continue
+        return ImageFont.load_default()
+
+    # Auto-scale: start from max, shrink until text fits
+    font_size = max(int(video_height * 0.10), 36)
+    font = _load_font(font_size)
+
+    # Measure text width at current font size, shrink if needed
+    tmp_img = Image.new("RGBA", (1, 1))
+    tmp_draw = ImageDraw.Draw(tmp_img)
+    text_w = tmp_draw.textlength(text, font=font)
+    while text_w > max_w and font_size > 24:
+        font_size = int(font_size * 0.85)
+        font = _load_font(font_size)
+        text_w = tmp_draw.textlength(text, font=font)
+
+    # If still too wide, wrap into two lines at midpoint
+    lines = [text]
+    if text_w > max_w:
+        mid = len(text) // 2
+        lines = [text[:mid], text[mid:]]
+
+    # Build segments per line: list[list[(text, color)]]
+    def _build_line_segments(line_text: str) -> list[tuple[str, str]]:
+        segs: list[tuple[str, str]] = []
+        rem = line_text
+        for word in highlight_words:
+            if not word:
+                continue
+            idx = rem.lower().find(word.lower())
+            if idx == -1:
+                continue
+            before = rem[:idx]
+            matched = rem[idx : idx + len(word)]
+            rem = rem[idx + len(word) :]
+            if before:
+                segs.append((before, primary))
+            segs.append((matched, highlight))
+        if rem:
+            segs.append((rem, primary))
+        return segs if segs else [(line_text, primary)]
+
+    all_line_segments = [_build_line_segments(ln) for ln in lines]
 
     img = Image.new("RGBA", (video_width, video_height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
-    # Measure total text width
-    total_w = 0
-    seg_sizes: list[tuple[str, str, tuple[int, int]]] = []
-    for seg_text, color in segments:
-        bbox = draw.textbbox((0, 0), seg_text, font=font)
-        w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
-        seg_sizes.append((seg_text, color, (w, h)))
-        total_w += w
+    outline_w = int(style.get("outline_width", DEFAULT_COVER_STYLE["outline_width"]))
+    or_, og, ob = int(outline_color[0:2], 16), int(outline_color[2:4], 16), int(outline_color[4:6], 16)
 
-    # Calculate starting x to center the full text
-    x = (video_width - total_w) // 2
-    max_h = max(h for _, _, (_, h) in seg_sizes) if seg_sizes else font_size
+    # Measure each line
+    line_heights: list[int] = []
+    line_widths: list[int] = []
+    for line_segs in all_line_segments:
+        lh = 0
+        lw = 0
+        for seg_text, _ in line_segs:
+            bbox = draw.textbbox((0, 0), seg_text, font=font)
+            lh = max(lh, bbox[3] - bbox[1])
+            lw += bbox[2] - bbox[0]
+        line_heights.append(lh)
+        line_widths.append(lw)
+
+    line_spacing = int(font_size * 0.3)
+    total_h = sum(line_heights) + line_spacing * (len(lines) - 1)
 
     if position == "top":
-        y = int(video_height * 0.08)
+        y_start = int(video_height * 0.08)
     elif position == "bottom":
-        y = video_height - int(video_height * 0.08) - max_h
+        y_start = video_height - int(video_height * 0.08) - total_h
     else:
-        y = (video_height - max_h) // 2
+        y_start = (video_height - total_h) // 2
 
-    # Draw each segment
-    for seg_text, color, (w, h) in seg_sizes:
-        r, g, b = int(color[0:2], 16), int(color[2:4], 16), int(color[4:6], 16)
-        # Draw outline (border)
-        outline_w = int(style.get("outline_width", DEFAULT_COVER_STYLE["outline_width"]))
-        or_, og, ob = int(outline_color[0:2], 16), int(outline_color[2:4], 16), int(outline_color[4:6], 16)
-        for dx in range(-outline_w, outline_w + 1):
-            for dy in range(-outline_w, outline_w + 1):
-                if dx == 0 and dy == 0:
-                    continue
-                draw.text((x + dx, y + dy), seg_text, font=font, fill=(or_, og, ob, 255))
-        draw.text((x, y), seg_text, font=font, fill=(r, g, b, 255))
-        x += w
+    # Draw each line
+    y = y_start
+    for i, line_segs in enumerate(all_line_segments):
+        x = (video_width - line_widths[i]) // 2
+        for seg_text, color in line_segs:
+            r, g, b = int(color[0:2], 16), int(color[2:4], 16), int(color[4:6], 16)
+            # Outline
+            for dx in range(-outline_w, outline_w + 1):
+                for dy in range(-outline_w, outline_w + 1):
+                    if dx == 0 and dy == 0:
+                        continue
+                    draw.text((x + dx, y + dy), seg_text, font=font, fill=(or_, og, ob, 255))
+            draw.text((x, y), seg_text, font=font, fill=(r, g, b, 255))
+            bbox = draw.textbbox((0, 0), seg_text, font=font)
+            x += bbox[2] - bbox[0]
+        y += line_heights[i] + line_spacing
 
     if output_path is None:
         output_path = Path("cover_title.png")
