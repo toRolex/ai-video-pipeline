@@ -3,9 +3,10 @@ from __future__ import annotations
 
 import csv
 import io
+import json
 import re
 import sqlite3
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -331,3 +332,190 @@ class MetricsStore:
             rec,
         )
         return "inserted"
+
+    # ── Aggregation queries ───────────────────────────────────────────────────────
+
+    def get_overview(self, days: int = 7, platform: str | None = None) -> dict[str, Any]:
+        """Aggregate metrics for the last *days* days.
+
+        Returns totals, average completion rate, and per-day breakdown.
+        """
+        cutoff = (datetime.now(UTC) - timedelta(days=days)).strftime("%Y-%m-%d")
+        where = ["publish_date >= ?"]
+        params: list[Any] = [cutoff]
+        if platform:
+            where.append("platform = ?")
+            params.append(platform)
+        where_sql = " AND ".join(where)
+
+        conn = self._conn()
+        try:
+            # Totals
+            row = conn.execute(
+                f"""SELECT
+                        COALESCE(SUM(plays), 0)           AS total_plays,
+                        COALESCE(SUM(likes), 0)           AS total_likes,
+                        COALESCE(SUM(followers_gained), 0) AS total_followers,
+                        COALESCE(AVG(completion_rate), 0)  AS avg_completion,
+                        COUNT(*)                           AS video_count
+                    FROM video_metrics WHERE {where_sql}""",
+                params,
+            ).fetchone()
+            totals = dict(row)
+
+            # Daily breakdown
+            daily_rows = conn.execute(
+                f"""SELECT
+                        publish_date,
+                        COALESCE(SUM(plays), 0)            AS plays,
+                        COALESCE(SUM(likes), 0)            AS likes,
+                        COALESCE(SUM(followers_gained), 0)  AS followers,
+                        COALESCE(AVG(completion_rate), 0)   AS avg_completion
+                    FROM video_metrics WHERE {where_sql}
+                    GROUP BY publish_date
+                    ORDER BY publish_date""",
+                params,
+            ).fetchall()
+            totals["daily"] = [dict(r) for r in daily_rows]
+        finally:
+            conn.close()
+        return totals
+
+    def get_videos(
+        self,
+        sort_by: str = "plays_desc",
+        platform: str | None = None,
+        search: str | None = None,
+        page: int = 1,
+        page_size: int = 50,
+    ) -> dict[str, Any]:
+        """Paginated, sorted video list with optional search and platform filter."""
+        order_map = {
+            "plays_desc":        "plays DESC",
+            "plays_asc":         "plays ASC",
+            "date_desc":         "publish_date DESC",
+            "date_asc":          "publish_date ASC",
+            "completion_desc":   "completion_rate DESC",
+            "likes_desc":        "likes DESC",
+            "followers_desc":    "followers_gained DESC",
+        }
+        order_clause = order_map.get(sort_by, "plays DESC")
+
+        where: list[str] = []
+        params: list[Any] = []
+        if platform:
+            where.append("platform = ?")
+            params.append(platform)
+        if search:
+            where.append("title LIKE ?")
+            params.append(f"%{search}%")
+        where_sql = (" WHERE " + " AND ".join(where)) if where else ""
+
+        conn = self._conn()
+        try:
+            total = conn.execute(
+                f"SELECT COUNT(*) AS c FROM video_metrics{where_sql}", params
+            ).fetchone()["c"]
+
+            offset = max(0, (page - 1) * page_size)
+            rows = conn.execute(
+                f"""SELECT * FROM video_metrics{where_sql}
+                    ORDER BY {order_clause}
+                    LIMIT ? OFFSET ?""",
+                params + [page_size, offset],
+            ).fetchall()
+        finally:
+            conn.close()
+
+        items = []
+        for r in rows:
+            d = dict(r)
+            raw = d.get("used_asset_ids")
+            if raw:
+                try:
+                    d["used_asset_ids"] = json.loads(raw)
+                except (json.JSONDecodeError, TypeError):
+                    d["used_asset_ids"] = []
+            else:
+                d["used_asset_ids"] = []
+            items.append(d)
+
+        return {"items": items, "total": total, "page": page, "page_size": page_size}
+
+    _STOPWORDS: set[str] = {
+        "的", "了", "在", "是", "我", "有", "和", "就", "不", "人", "都",
+        "一", "一个", "上", "也", "很", "到", "说", "要", "去", "你", "会",
+        "着", "没有", "看", "好", "自己", "这", "他", "她", "它", "们",
+        "那", "这个", "那个", "什么", "怎么", "可以", "没", "什么", "还",
+        "把", "让", "跟", "从", "被", "用", "对", "做", "来", "给", "着",
+        "吗", "吧", "啊", "呢", "哦", "嗯", "啦", "哈", "呀", "嘛",
+        "而", "但", "可是", "但是", "因为", "所以", "如果", "虽然", "不过",
+        "或者", "还是", "就是", "已经", "可以", "非常", "比较", "可能",
+        "而且", "然后", "其实", "只是", "真是", "真的", "真的", "这个",
+        "那个", "一下", "出来", "起来", "下来", "上去", "过来", "过去",
+    }
+
+    @classmethod
+    def _extract_keywords(cls, title: str) -> list[str]:
+        """Split a title on punctuation/whitespace and return non-trivial tokens."""
+        tokens = re.split(r"[#，,。！？、\s]+", title.strip())
+        return [
+            t for t in tokens
+            if len(t) >= 2 and t not in cls._STOPWORDS
+        ]
+
+    def get_topics(
+        self,
+        days: int = 30,
+        platform: str | None = None,
+        limit: int = 10,
+    ) -> list[dict[str, Any]]:
+        """Extract keywords from titles, group by keyword, aggregate plays.
+
+        Returns top *limit* keywords sorted by total plays descending.
+        """
+        cutoff = (datetime.now(UTC) - timedelta(days=days)).strftime("%Y-%m-%d")
+        where = ["publish_date >= ?"]
+        params: list[Any] = [cutoff]
+        if platform:
+            where.append("platform = ?")
+            params.append(platform)
+        where_sql = " AND ".join(where)
+
+        conn = self._conn()
+        try:
+            rows = conn.execute(
+                f"""SELECT title, plays, completion_rate
+                    FROM video_metrics WHERE {where_sql}""",
+                params,
+            ).fetchall()
+        finally:
+            conn.close()
+
+        # Aggregate in Python: keyword -> {total_plays, video_count, sum_completion, count_completion}
+        agg: dict[str, dict[str, Any]] = {}
+        for r in rows:
+            kw_list = self._extract_keywords(r["title"])
+            for kw in kw_list:
+                bucket = agg.setdefault(kw, {
+                    "total_plays": 0, "video_count": 0,
+                    "_sum_cr": 0.0, "_count_cr": 0,
+                })
+                bucket["total_plays"] += r["plays"] or 0
+                bucket["video_count"] += 1
+                if r["completion_rate"] is not None:
+                    bucket["_sum_cr"] += r["completion_rate"]
+                    bucket["_count_cr"] += 1
+
+        topics = []
+        for kw, v in agg.items():
+            avg_cr = round(v["_sum_cr"] / v["_count_cr"], 2) if v["_count_cr"] else 0.0
+            topics.append({
+                "keyword": kw,
+                "total_plays": v["total_plays"],
+                "video_count": v["video_count"],
+                "avg_completion": avg_cr,
+            })
+
+        topics.sort(key=lambda x: x["total_plays"], reverse=True)
+        return topics[:limit]
