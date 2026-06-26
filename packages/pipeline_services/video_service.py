@@ -41,42 +41,48 @@ def _ass_escape(text: str) -> str:
     return text.replace("\\", "\\\\").replace("{", "\\{").replace("}", "\\}")
 
 
-def _build_ass_for_cover_title(
+def _render_cover_title_png(
     text: str,
     highlight_words: list[str],
     style: dict,
     video_width: int,
     video_height: int,
-    duration: float = 3.0,
     output_path: Path | None = None,
 ) -> Path:
-    """Generate an ASS subtitle file for cover title overlay (0-duration seconds)."""
-    if output_path is None:
-        output_path = Path("cover_title.ass")
+    """Render cover title text as a transparent PNG using Pillow.
 
-    primary = _hex_to_ass_bgr(style.get("primary_color", DEFAULT_COVER_STYLE["primary_color"]))
-    outline = _hex_to_ass_bgr(style.get("outline_color", DEFAULT_COVER_STYLE["outline_color"]))
-    highlight = _hex_to_ass_bgr(style.get("highlight_color", DEFAULT_COVER_STYLE["highlight_color"]))
-    outline_width = float(style.get("outline_width", DEFAULT_COVER_STYLE["outline_width"]))
+    Returns the path to the generated PNG image.  The image has the same
+    dimensions as the video so it can be directly composited with the
+    ``overlay`` filter.
+    """
+    from PIL import Image, ImageDraw, ImageFont
+
+    primary = style.get("primary_color", DEFAULT_COVER_STYLE["primary_color"]).lstrip("#")
+    highlight = style.get("highlight_color", DEFAULT_COVER_STYLE["highlight_color"]).lstrip("#")
+    outline_color = style.get("outline_color", DEFAULT_COVER_STYLE["outline_color"]).lstrip("#")
     position = style.get("position", DEFAULT_COVER_STYLE["position"])
 
-    play_res_x = video_width
-    play_res_y = video_height
-
-    # Font size scales with video height; bold large font.
     font_size = max(int(video_height * 0.12), 48)
-    margin_v = int(video_height * 0.08)
-    if position == "top":
-        alignment = 8  # top-center
-    elif position == "bottom":
-        alignment = 2  # bottom-center
-    else:
-        alignment = 5  # center
 
-    # Construct body with optional highlight overrides.
-    body_parts = []
+    # Try to load a CJK-capable font; fall back to default
+    font = None
+    for fp in [
+        "/System/Library/Fonts/PingFang.ttc",
+        "/System/Library/Fonts/STHeiti Medium.ttc",
+        "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+    ]:
+        try:
+            font = ImageFont.truetype(fp, font_size)
+            break
+        except (OSError, IOError):
+            continue
+    if font is None:
+        font = ImageFont.load_default()
+
+    # Build segments: (text, color_hex)
+    segments: list[tuple[str, str]] = []
     remaining = text
-    highlight_lower = [w.lower() for w in highlight_words]
     for word in highlight_words:
         if not word:
             continue
@@ -87,32 +93,51 @@ def _build_ass_for_cover_title(
         matched = remaining[idx : idx + len(word)]
         remaining = remaining[idx + len(word) :]
         if before:
-            body_parts.append(_ass_escape(before))
-        body_parts.append(f"{{\\c{highlight}}}{_ass_escape(matched)}{{\\c{primary}}}")
+            segments.append((before, primary))
+        segments.append((matched, highlight))
     if remaining:
-        body_parts.append(_ass_escape(remaining))
-    body_text = "".join(body_parts)
+        segments.append((remaining, primary))
 
-    ass_text = (
-        "[Script Info]\n"
-        "Title: Cover Title\n"
-        f"PlayResX: {play_res_x}\n"
-        f"PlayResY: {play_res_y}\n"
-        "ScaledBorderAndShadow: yes\n"
-        "\n"
-        "[V4+ Styles]\n"
-        "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, "
-        "BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, "
-        "BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n"
-        f"Style: Default,sans-serif,{font_size},{primary},&H00000000&,{outline},&H00000000&,1,0,0,0,"
-        f"100,100,0,0,1,{outline_width},0,{alignment},10,10,{margin_v},1\n"
-        "\n"
-        "[Events]\n"
-        "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n"
-        f"Dialogue: 0,0:00:00.00,0:00:0{duration:.2f},Default,,0,0,0,,{body_text}\n"
-    )
+    img = Image.new("RGBA", (video_width, video_height), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
 
-    output_path.write_text(ass_text, encoding="utf-8")
+    # Measure total text width
+    total_w = 0
+    seg_sizes: list[tuple[str, str, tuple[int, int]]] = []
+    for seg_text, color in segments:
+        bbox = draw.textbbox((0, 0), seg_text, font=font)
+        w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
+        seg_sizes.append((seg_text, color, (w, h)))
+        total_w += w
+
+    # Calculate starting x to center the full text
+    x = (video_width - total_w) // 2
+    max_h = max(h for _, _, (_, h) in seg_sizes) if seg_sizes else font_size
+
+    if position == "top":
+        y = int(video_height * 0.08)
+    elif position == "bottom":
+        y = video_height - int(video_height * 0.08) - max_h
+    else:
+        y = (video_height - max_h) // 2
+
+    # Draw each segment
+    for seg_text, color, (w, h) in seg_sizes:
+        r, g, b = int(color[0:2], 16), int(color[2:4], 16), int(color[4:6], 16)
+        # Draw outline (border)
+        outline_w = int(style.get("outline_width", DEFAULT_COVER_STYLE["outline_width"]))
+        or_, og, ob = int(outline_color[0:2], 16), int(outline_color[2:4], 16), int(outline_color[4:6], 16)
+        for dx in range(-outline_w, outline_w + 1):
+            for dy in range(-outline_w, outline_w + 1):
+                if dx == 0 and dy == 0:
+                    continue
+                draw.text((x + dx, y + dy), seg_text, font=font, fill=(or_, og, ob, 255))
+        draw.text((x, y), seg_text, font=font, fill=(r, g, b, 255))
+        x += w
+
+    if output_path is None:
+        output_path = Path("cover_title.png")
+    img.save(str(output_path), "PNG")
     return output_path
 
 
@@ -140,7 +165,7 @@ def _build_cover_video_filter(
     base_idx: int,
     width: int,
     height: int,
-    cover_escaped: str | None,
+    cover_title_idx: int | None,
     has_subtitles: bool,
     srt_sub_escaped: str,
     subtitle_style: str,
@@ -148,15 +173,14 @@ def _build_cover_video_filter(
     """Build video filter chain with cover clip concatenation.
 
     Returns (filter_complex, video_output_label).
-    Cover title takes priority over subtitles when both are present.
     """
     fc = (
         f"[{cover_idx}:v]scale={width}:{height},setsar=1[v0];"
         f"[{base_idx}:v]scale={width}:{height},setsar=1[v1];"
         f"[v0][v1]concat=n=2:v=1:a=0[cv]"
     )
-    if cover_escaped is not None:
-        fc += f";[cv]subtitles='{cover_escaped}':force_style='Fontname=sans-serif'[v]"
+    if cover_title_idx is not None:
+        fc += f";[cv][{cover_title_idx}:v]overlay=0:0:enable='between(t,0,3)'[v]"
     elif has_subtitles:
         fc += f";[cv]subtitles='{srt_sub_escaped}':force_style='{subtitle_style}'[v]"
     else:
@@ -166,7 +190,7 @@ def _build_cover_video_filter(
 
 def _build_simple_video_filter(
     base_idx: int,
-    cover_escaped: str | None,
+    cover_title_idx: int | None,
     has_subtitles: bool,
     srt_sub_escaped: str,
     subtitle_style: str,
@@ -175,16 +199,16 @@ def _build_simple_video_filter(
 
     Returns (filter_complex, video_output_label).
     When filter_complex is empty, label is a stream spec like "0:v:0".
-    Cover title and subtitles can coexist (chained) in this path.
+    Cover title (PNG overlay) and subtitles can coexist (chained) in this path.
     """
-    if cover_escaped is not None:
-        ct = f"subtitles='{cover_escaped}':force_style='Fontname=sans-serif'"
+    if cover_title_idx is not None:
+        overlay = f"[{base_idx}:v][{cover_title_idx}:v]overlay=0:0:enable='between(t,0,3)'[v]"
         if has_subtitles:
             return (
-                f"[{base_idx}:v]{ct}[v];[v]subtitles='{srt_sub_escaped}':force_style='{subtitle_style}'[out]",
+                f"{overlay};[v]subtitles='{srt_sub_escaped}':force_style='{subtitle_style}'[out]",
                 "[out]",
             )
-        return f"[{base_idx}:v]{ct}[v]", "[v]"
+        return overlay, "[v]"
     if has_subtitles:
         return (
             f"[{base_idx}:v]subtitles='{srt_sub_escaped}':force_style='{subtitle_style}'[v]",
@@ -305,23 +329,20 @@ class VideoService:
         srt_ffmpeg = _format_ass_path_for_ffmpeg(srt_path) if has_subtitles else ""
 
         cover_title_text = (cover_title or {}).get("text", "")
-        cover_title_ass: Path | None = None
-        cover_escaped: str | None = None
+        cover_title_png: Path | None = None
         if cover_title_text:
             base_duration = get_media_duration(base_video_path)
             if base_duration >= 3.0:
                 width, height = get_video_size(base_video_path)
-                cover_title_ass = final_video_path.parent / "cover_title.ass"
-                _build_ass_for_cover_title(
+                cover_title_png = final_video_path.parent / "cover_title.png"
+                _render_cover_title_png(
                     text=cover_title_text,
                     highlight_words=(cover_title or {}).get("highlight_words", []),
                     style=(cover_title or {}).get("style", DEFAULT_COVER_STYLE),
                     video_width=width,
                     video_height=height,
-                    duration=3.0,
-                    output_path=cover_title_ass,
+                    output_path=cover_title_png,
                 )
-                cover_escaped = _format_ass_path_for_ffmpeg(cover_title_ass)
 
         encoder_args = [
             "-c:v", "libx264", "-preset", "medium", "-crf", "23", "-pix_fmt", "yuv420p",
@@ -336,30 +357,38 @@ class VideoService:
             music_vol = music_volume / 100.0
 
         has_cover = cover_clip_path is not None and cover_clip_path.exists()
+        has_cover_title = cover_title_png is not None and cover_title_png.exists()
 
         # ── Build video filter ──
         if has_cover:
             width, height = get_video_size(base_video_path)
+            # cover_title_idx = 3 if both cover clip and cover title exist
+            ct_idx = 3 if has_cover_title else None
             vf, v_label = _build_cover_video_filter(
                 cover_idx=0, base_idx=1,
                 width=width, height=height,
-                cover_escaped=cover_escaped,
+                cover_title_idx=ct_idx,
                 has_subtitles=has_subtitles,
                 srt_sub_escaped=srt_ffmpeg,
                 subtitle_style=subtitle_style,
             )
-            audio_idx, music_idx = 2, 3
             inputs = ["-i", str(cover_clip_path), "-i", str(base_video_path), "-i", str(audio_path)]
+            if has_cover_title:
+                inputs += ["-i", str(cover_title_png)]
+            audio_idx, music_idx = len(inputs) - 2, len(inputs) - 1
         else:
+            ct_idx = 2 if has_cover_title else None
             vf, v_label = _build_simple_video_filter(
                 base_idx=0,
-                cover_escaped=cover_escaped,
+                cover_title_idx=ct_idx,
                 has_subtitles=has_subtitles,
                 srt_sub_escaped=srt_ffmpeg,
                 subtitle_style=subtitle_style,
             )
-            audio_idx, music_idx = 1, 2
             inputs = ["-i", str(base_video_path), "-i", str(audio_path)]
+            if has_cover_title:
+                inputs += ["-i", str(cover_title_png)]
+            audio_idx, music_idx = len(inputs) - 2, len(inputs) - 1
 
         # ── Build audio filter (if music) ──
         af, a_label = "", f"{audio_idx}:a:0"
