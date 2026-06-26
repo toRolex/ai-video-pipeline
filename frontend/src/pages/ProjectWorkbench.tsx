@@ -36,7 +36,9 @@ export default function ProjectWorkbench() {
   const [selectedMusic, setSelectedMusic] = useState("");
   const [musicVolume, setMusicVolume] = useState(80);
   const [language, setLanguage] = useState<"mandarin" | "cantonese">("mandarin");
+  const [skipSubtitle, setSkipSubtitle] = useState(false);
   const [batchLanguage, setBatchLanguage] = useState(false);
+  const [batchSkipSubtitle, setBatchSkipSubtitle] = useState(false);
   const [coverTitleText, setCoverTitleText] = useState("");
   const [coverHighlightWords, setCoverHighlightWords] = useState("");
   const [coverTitleCooldown, setCoverTitleCooldown] = useState(false);
@@ -105,6 +107,7 @@ export default function ProjectWorkbench() {
         music_track_path: selectedMusic,
         music_volume: musicVolume,
         language: language,
+        skip_subtitle: skipSubtitle,
         cover_title: coverTitleText.trim()
           ? { text: coverTitleText.trim(), highlight_words: coverHighlightWords.split(/[,，]/).map((w) => w.trim()).filter(Boolean) }
           : undefined,
@@ -320,23 +323,19 @@ export default function ProjectWorkbench() {
               <div className="flex items-end pb-1">
                 <BatchScriptUploader onScripts={handleScriptsUpload} />
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-[#59636e]">字幕总控</span>
-                <button
-                  type="button"
-                  className="px-3 py-2 text-sm border rounded-lg hover:bg-gray-50 transition-colors"
-                  onClick={() => setBatchConfigs((prev) => prev.map((c) => ({ ...c, skipSubtitle: true })))}
-                >
-                  全部跳过字幕
-                </button>
-                <button
-                  type="button"
-                  className="px-3 py-2 text-sm border rounded-lg hover:bg-gray-50 transition-colors"
-                  onClick={() => setBatchConfigs((prev) => prev.map((c) => ({ ...c, skipSubtitle: false })))}
-                >
-                  全部带字幕
-                </button>
-              </div>
+              <label className="flex items-center gap-1.5 text-sm cursor-pointer ml-2">
+                <input
+                  type="checkbox"
+                  checked={batchSkipSubtitle}
+                  onChange={(e) => {
+                    setBatchSkipSubtitle(e.target.checked);
+                    setBatchConfigs((prev) =>
+                      prev.map((c) => ({ ...c, skipSubtitle: e.target.checked })),
+                    );
+                  }}
+                />
+                全部跳过字幕
+              </label>
             </div>
 
             {/* 每个 Job 的独立配置卡片 */}
@@ -581,6 +580,14 @@ export default function ProjectWorkbench() {
                     onChange={(e) => setLanguage(e.target.checked ? "cantonese" : "mandarin")}
                   />
                   粤语版
+                </label>
+                <label className="flex items-center gap-1.5 text-sm cursor-pointer ml-4">
+                  <input
+                    type="checkbox"
+                    checked={skipSubtitle}
+                    onChange={(e) => setSkipSubtitle(e.target.checked)}
+                  />
+                  跳过字幕
                 </label>
               </div>
               {scriptMode === "manual" && (
