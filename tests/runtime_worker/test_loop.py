@@ -189,7 +189,7 @@ def test_http_client_absolute_url_handles_absolute_and_relative_paths() -> None:
     assert client._absolute_url("bundle") == "http://127.0.0.1:17890/bundle"
 
 
-def test_worker_loop_returns_immediately_for_idle_command(tmp_path: Path) -> None:
+def test_worker_loop_sleeps_and_retries_on_idle(tmp_path: Path) -> None:
     api = StubIdleApi(max_polls=2)
     loop = _make_loop(tmp_path, api)
 
