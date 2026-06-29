@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 
 from apps.control_plane.app import create_app
@@ -13,7 +14,10 @@ def main() -> None:
         format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
         handlers=[logging.StreamHandler(sys.stdout)],
     )
-    uvicorn.run(create_app(), host="127.0.0.1", port=17890)
+    host = os.environ.get("CONTROL_PLANE_HOST", "127.0.0.1")
+    port = int(os.environ.get("CONTROL_PLANE_PORT", "17890"))
+    logging.info("Starting control plane on %s:%d", host, port)
+    uvicorn.run(create_app(), host=host, port=port)
 
 
 if __name__ == "__main__":

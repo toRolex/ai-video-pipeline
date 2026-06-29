@@ -226,9 +226,15 @@ async def lifespan(app: FastAPI):
 def create_app(root_dir: Path | None = None) -> FastAPI:
     app = FastAPI(title="Ziyuantang Control Plane", lifespan=lifespan)
 
+    allow_origins_env = os.environ.get(
+        "CORS_ALLOWED_ORIGINS",
+        "http://localhost:5173,http://localhost:17890",
+    )
+    allow_origins = [o.strip() for o in allow_origins_env.split(",") if o.strip()]
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:5173"],
+        allow_origins=allow_origins,
         allow_methods=["*"],
         allow_headers=["*"],
     )
