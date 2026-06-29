@@ -68,9 +68,14 @@ class TestTTSMetricsBlackBox:
         assert response.status_code == 200
         data = response.json()
         required_fields = [
-            "time_range", "total_requests", "success_count",
-            "failure_count", "success_rate", "avg_latency_ms",
-            "error_distribution", "voice_distribution"
+            "time_range",
+            "total_requests",
+            "success_count",
+            "failure_count",
+            "success_rate",
+            "avg_latency_ms",
+            "error_distribution",
+            "voice_distribution",
         ]
         for field in required_fields:
             assert field in data
@@ -93,10 +98,9 @@ class TestTTSPreviewBlackBox:
         monkeypatch.setattr("packages.provider_config.app_config.load_dotenv", None)
         monkeypatch.delenv("MIMO_API_KEY", raising=False)
         monkeypatch.delenv("TTS_API_KEY", raising=False)
-        response = client.post("/api/tts/preview", json={
-            "text": "测试文本",
-            "model": "mimo-v2.5-tts"
-        })
+        response = client.post(
+            "/api/tts/preview", json={"text": "测试文本", "model": "mimo-v2.5-tts"}
+        )
         assert response.status_code == 500
         assert "MIMO_API_KEY" in response.json()["detail"]
 
@@ -104,8 +108,7 @@ class TestTTSPreviewBlackBox:
         monkeypatch.setattr("packages.provider_config.app_config.load_dotenv", None)
         monkeypatch.delenv("MIMO_API_KEY", raising=False)
         monkeypatch.delenv("TTS_API_KEY", raising=False)
-        response = client.post("/api/tts/preview", json={
-            "text": "测试文本",
-            "model": ""
-        })
+        response = client.post(
+            "/api/tts/preview", json={"text": "测试文本", "model": ""}
+        )
         assert response.status_code in [400, 422, 500]

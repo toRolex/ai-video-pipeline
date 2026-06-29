@@ -4,6 +4,7 @@ Following TDD: These tests verify that video slices are valid and can be concate
 The current implementation using -c copy will fail these tests because slices
 may not start with keyframes.
 """
+
 import subprocess
 from pathlib import Path
 
@@ -13,7 +14,9 @@ from packages.pipeline_services.asset_library.indexer import AssetIndexer
 from packages.pipeline_services.asset_library.repository import AssetRepository
 
 
-def _create_test_video(output_path: Path, duration: float = 20.0, keyframe_interval: int = 240) -> Path:
+def _create_test_video(
+    output_path: Path, duration: float = 20.0, keyframe_interval: int = 240
+) -> Path:
     """Create a test video with infrequent keyframes to trigger the slicing bug.
 
     keyframe_interval: frames between keyframes (default 240 = 10 seconds at 24fps)
@@ -25,14 +28,22 @@ def _create_test_video(output_path: Path, duration: float = 20.0, keyframe_inter
         ffmpeg = "ffmpeg"
     cmd = [
         str(ffmpeg),
-        "-f", "lavfi",
-        "-i", f"color=c=red:s=320x240:d={duration}:r=24",
-        "-c:v", "libx264",
-        "-preset", "ultrafast",
-        "-pix_fmt", "yuv420p",
-        "-g", str(keyframe_interval),
-        "-keyint_min", str(keyframe_interval),
-        "-sc_threshold", "0",
+        "-f",
+        "lavfi",
+        "-i",
+        f"color=c=red:s=320x240:d={duration}:r=24",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "ultrafast",
+        "-pix_fmt",
+        "yuv420p",
+        "-g",
+        str(keyframe_interval),
+        "-keyint_min",
+        str(keyframe_interval),
+        "-sc_threshold",
+        "0",
         "-y",
         str(output_path),
     ]
@@ -40,7 +51,9 @@ def _create_test_video(output_path: Path, duration: float = 20.0, keyframe_inter
     return output_path
 
 
-def _concat_videos(ffmpeg_path: str, video_paths: list[Path], output_path: Path) -> bool:
+def _concat_videos(
+    ffmpeg_path: str, video_paths: list[Path], output_path: Path
+) -> bool:
     """Attempt to concatenate videos. Returns True if successful, False if error."""
     concat_list = output_path.parent / "concat_list.txt"
     with open(concat_list, "w") as f:
@@ -49,10 +62,14 @@ def _concat_videos(ffmpeg_path: str, video_paths: list[Path], output_path: Path)
 
     cmd = [
         str(ffmpeg_path),
-        "-f", "concat",
-        "-safe", "0",
-        "-i", str(concat_list),
-        "-c", "copy",
+        "-f",
+        "concat",
+        "-safe",
+        "0",
+        "-i",
+        str(concat_list),
+        "-c",
+        "copy",
         "-y",
         str(output_path),
     ]
@@ -80,11 +97,16 @@ def _get_first_frame_type(ffmpeg_path: str, video_path: Path) -> str | None:
     ffprobe_path = str(ffmpeg_path).replace("ffmpeg", "ffprobe")
     cmd = [
         ffprobe_path,
-        "-v", "error",
-        "-select_streams", "v:0",
-        "-show_entries", "frame=pict_type",
-        "-of", "csv",
-        "-read_intervals", "%+0.01",
+        "-v",
+        "error",
+        "-select_streams",
+        "v:0",
+        "-show_entries",
+        "frame=pict_type",
+        "-of",
+        "csv",
+        "-read_intervals",
+        "%+0.01",
         str(video_path),
     ]
     try:
@@ -155,14 +177,16 @@ class TestIndexerSlicing:
         for slice_path in slices:
             assert slice_path.exists(), f"Slice {slice_path} does not exist"
             first_frame = _get_first_frame_type(str(ffmpeg_path), slice_path)
-            assert first_frame == "I", \
+            assert first_frame == "I", (
                 f"Slice {slice_path} starts with {first_frame}-frame, not I-frame (keyframe)"
+            )
 
         # Critical test - slices should be concatenatable
         concat_output = tmp_path / "concat_result.mp4"
         can_concat = _concat_videos(str(ffmpeg_path), slices, concat_output)
-        assert can_concat, \
+        assert can_concat, (
             "FAILED: Slices cannot be concatenated! This is the bug - slices don't start with keyframes."
+        )
 
     def test_long_clip_split_produces_valid_slices(self, tmp_path):
         """
@@ -201,5 +225,4 @@ class TestIndexerSlicing:
         # Critical test - sub-clips should be concatenatable
         concat_output = tmp_path / "concat_sub_result.mp4"
         can_concat = _concat_videos(str(ffmpeg_path), sub_clips, concat_output)
-        assert can_concat, \
-            "FAILED: Sub-clips cannot be concatenated! This is the bug."
+        assert can_concat, "FAILED: Sub-clips cannot be concatenated! This is the bug."

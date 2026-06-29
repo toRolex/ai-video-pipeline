@@ -1,4 +1,5 @@
 """测试 voiceclone 样本上传接口"""
+
 import pytest
 from fastapi.testclient import TestClient
 from apps.control_plane.app import create_app
@@ -22,7 +23,9 @@ def test_upload_voice_clone_sample_mp3(client, tmp_path):
     data = response.json()
     assert data["success"] is True
     assert "voice_clone_sample.mp3" in data["path"]
-    saved_path = tmp_path / "config" / "projects" / "test_project" / "voice_clone_sample.mp3"
+    saved_path = (
+        tmp_path / "config" / "projects" / "test_project" / "voice_clone_sample.mp3"
+    )
     assert saved_path.exists()
     assert saved_path.read_bytes() == sample_content
 
@@ -62,6 +65,7 @@ def test_upload_voice_clone_sample_updates_config(client, tmp_path):
     )
     assert response.status_code == 200
     from packages.provider_config.tts_config import TTSConfigManager
+
     config_manager = TTSConfigManager(config_dir=str(tmp_path / "config"))
     config = config_manager.get_config("test_project")
     assert config.voice_clone_sample_path is not None

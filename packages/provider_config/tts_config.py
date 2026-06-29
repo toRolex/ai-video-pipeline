@@ -14,16 +14,16 @@ class TTSConfig:
     randomize_voice: bool | None = None
     random_voices: list[str] | None = None
     voice_design_prompt: str | None = None
-    
+
     # 风格控制 - 自然语言控制
     style_control_mode: str | None = None  # "simple" 或 "director"
     style_prompt: str | None = None  # 简单模式的风格描述
-    
+
     # 导演模式
     director_character: str | None = None  # 角色描述
     director_scene: str | None = None  # 场景描述
     director_guidance: str | None = None  # 指导描述
-    
+
     # 标签控制
     audio_tags_enabled: bool | None = None  # 是否启用标签控制
     audio_tags: str | None = None  # 音频标签，如 "(温柔)[笑声]文本内容[叹气]"
@@ -114,30 +114,66 @@ class TTSConfig:
         return TTSConfig(
             model=self.model if self.model is not None else defaults["model"],
             voice=self.voice if self.voice is not None else defaults["voice"],
-            fallback_voice=self.fallback_voice if self.fallback_voice is not None else defaults["fallback_voice"],
-            randomize_voice=self.randomize_voice if self.randomize_voice is not None else defaults["randomize_voice"],
-            random_voices=self.random_voices if self.random_voices is not None else defaults["random_voices"],
-            voice_design_prompt=self.voice_design_prompt if self.voice_design_prompt is not None else defaults["voice_design_prompt"],
-            style_control_mode=self.style_control_mode if self.style_control_mode is not None else defaults["style_control_mode"],
-            style_prompt=self.style_prompt if self.style_prompt is not None else defaults["style_prompt"],
-            director_character=self.director_character if self.director_character is not None else defaults["director_character"],
-            director_scene=self.director_scene if self.director_scene is not None else defaults["director_scene"],
-            director_guidance=self.director_guidance if self.director_guidance is not None else defaults["director_guidance"],
-            audio_tags_enabled=self.audio_tags_enabled if self.audio_tags_enabled is not None else defaults["audio_tags_enabled"],
-            audio_tags=self.audio_tags if self.audio_tags is not None else defaults["audio_tags"],
+            fallback_voice=self.fallback_voice
+            if self.fallback_voice is not None
+            else defaults["fallback_voice"],
+            randomize_voice=self.randomize_voice
+            if self.randomize_voice is not None
+            else defaults["randomize_voice"],
+            random_voices=self.random_voices
+            if self.random_voices is not None
+            else defaults["random_voices"],
+            voice_design_prompt=self.voice_design_prompt
+            if self.voice_design_prompt is not None
+            else defaults["voice_design_prompt"],
+            style_control_mode=self.style_control_mode
+            if self.style_control_mode is not None
+            else defaults["style_control_mode"],
+            style_prompt=self.style_prompt
+            if self.style_prompt is not None
+            else defaults["style_prompt"],
+            director_character=self.director_character
+            if self.director_character is not None
+            else defaults["director_character"],
+            director_scene=self.director_scene
+            if self.director_scene is not None
+            else defaults["director_scene"],
+            director_guidance=self.director_guidance
+            if self.director_guidance is not None
+            else defaults["director_guidance"],
+            audio_tags_enabled=self.audio_tags_enabled
+            if self.audio_tags_enabled is not None
+            else defaults["audio_tags_enabled"],
+            audio_tags=self.audio_tags
+            if self.audio_tags is not None
+            else defaults["audio_tags"],
             voice_clone_sample_path=self.voice_clone_sample_path,
             voice_clone_mime_type=self.voice_clone_mime_type,
             optimize_text_preview=self.optimize_text_preview,
-            instructions=self.instructions if self.instructions is not None else defaults["instructions"],
+            instructions=self.instructions
+            if self.instructions is not None
+            else defaults["instructions"],
             optimize_instructions=self.optimize_instructions,
-            language_type=self.language_type if self.language_type is not None else defaults["language_type"],
-            audio_format=self.audio_format if self.audio_format is not None else defaults["audio_format"],
-            sample_rate=self.sample_rate if self.sample_rate is not None else defaults["sample_rate"],
+            language_type=self.language_type
+            if self.language_type is not None
+            else defaults["language_type"],
+            audio_format=self.audio_format
+            if self.audio_format is not None
+            else defaults["audio_format"],
+            sample_rate=self.sample_rate
+            if self.sample_rate is not None
+            else defaults["sample_rate"],
             bitrate=self.bitrate if self.bitrate is not None else defaults["bitrate"],
             channel=self.channel if self.channel is not None else defaults["channel"],
-            enable_request_logging=self.enable_request_logging if self.enable_request_logging is not None else defaults["enable_request_logging"],
-            enable_performance_metrics=self.enable_performance_metrics if self.enable_performance_metrics is not None else defaults["enable_performance_metrics"],
-            log_audio_duration=self.log_audio_duration if self.log_audio_duration is not None else defaults["log_audio_duration"],
+            enable_request_logging=self.enable_request_logging
+            if self.enable_request_logging is not None
+            else defaults["enable_request_logging"],
+            enable_performance_metrics=self.enable_performance_metrics
+            if self.enable_performance_metrics is not None
+            else defaults["enable_performance_metrics"],
+            log_audio_duration=self.log_audio_duration
+            if self.log_audio_duration is not None
+            else defaults["log_audio_duration"],
         )
 
 
@@ -195,6 +231,7 @@ class TTSConfigManager:
 
     def _load_global_config(self) -> TTSConfig:
         from packages.provider_config.app_config import AppConfigManager
+
         app_manager = AppConfigManager(config_dir=self.config_dir)
         if app_manager.config_path.exists():
             data = app_manager.get_tts_config()
@@ -216,6 +253,7 @@ class TTSConfigManager:
         # 自动迁移: mimo-v2-tts → qwen3-tts-flash
         if config.model == "mimo-v2-tts":
             import logging
+
             logger = logging.getLogger(__name__)
             logger.warning("Auto-migrating mimo-v2-tts → qwen3-tts-flash")
             config.model = "qwen3-tts-flash"
@@ -227,6 +265,7 @@ class TTSConfigManager:
 
     def _save_global_config(self, config: TTSConfig) -> None:
         from packages.provider_config.app_config import AppConfigManager
+
         app_manager = AppConfigManager(config_dir=self.config_dir)
         for key, value in config.to_dict().items():
             if value is None:

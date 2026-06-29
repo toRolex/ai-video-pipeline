@@ -1,11 +1,12 @@
 """Tests for MetricsStore aggregation queries and /api/metrics endpoints."""
+
 from __future__ import annotations
 
 import csv
 import io
 import json
 import tempfile
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -17,6 +18,7 @@ from apps.control_plane.services.metrics import MetricsStore
 
 # ── Helpers ──────────────────────────────────────────────────────────────────────
 
+
 def _write_csv(rows: list[list[str]]) -> bytes:
     buf = io.StringIO()
     writer = csv.writer(buf)
@@ -25,8 +27,13 @@ def _write_csv(rows: list[list[str]]) -> bytes:
     return ("﻿" + buf.getvalue()).encode("utf-8")
 
 
-def _seed_store(store: MetricsStore, *, count: int = 3, platform: str = "weixin",
-                base_date: str = "2026-06-20") -> None:
+def _seed_store(
+    store: MetricsStore,
+    *,
+    count: int = 3,
+    platform: str = "weixin",
+    base_date: str = "2026-06-20",
+) -> None:
     """Insert test rows directly into the DB."""
     conn = store._conn()
     try:
@@ -42,9 +49,21 @@ def _seed_store(store: MetricsStore, *, count: int = 3, platform: str = "weixin"
                     shares, followers_gained, completion_rate, extra,
                     job_id, used_asset_ids, imported_at)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (platform, f"测试视频{i}", pub_date,
-                 100 * i, 10 * i, i, 0, i, 20.0 + i,
-                 None, None, json.dumps([f"a{i}"]), now),
+                (
+                    platform,
+                    f"测试视频{i}",
+                    pub_date,
+                    100 * i,
+                    10 * i,
+                    i,
+                    0,
+                    i,
+                    20.0 + i,
+                    None,
+                    None,
+                    json.dumps([f"a{i}"]),
+                    now,
+                ),
             )
         conn.commit()
     finally:
@@ -68,6 +87,7 @@ def client(tmp_path):
 
 
 # ── Aggregation: get_overview ────────────────────────────────────────────────────
+
 
 class TestGetOverview:
     def test_returns_total_keys(self, store):
@@ -104,8 +124,7 @@ class TestGetOverview:
 
     def test_platform_filter(self, store):
         _seed_store(store, count=2, platform="weixin")
-        _seed_store(store, count=1, platform="xiaohongshu",
-                    base_date="2026-06-21")
+        _seed_store(store, count=1, platform="xiaohongshu", base_date="2026-06-21")
         result = store.get_overview(days=30, platform="weixin")
         assert result["video_count"] == 2
         assert result["total_plays"] == 300  # 100 + 200
@@ -124,6 +143,7 @@ class TestGetOverview:
 
 
 # ── Aggregation: get_videos ──────────────────────────────────────────────────────
+
 
 class TestGetVideos:
     def test_returns_items_and_pagination(self, store):
@@ -174,8 +194,7 @@ class TestGetVideos:
 
     def test_platform_filter(self, store):
         _seed_store(store, count=2, platform="weixin")
-        _seed_store(store, count=1, platform="xiaohongshu",
-                    base_date="2026-06-21")
+        _seed_store(store, count=1, platform="xiaohongshu", base_date="2026-06-21")
         result = store.get_videos(platform="weixin")
         assert result["total"] == 2
 
@@ -186,6 +205,7 @@ class TestGetVideos:
 
 
 # ── Aggregation: get_topics ──────────────────────────────────────────────────────
+
 
 class TestGetTopics:
     def _seed_titles(self, store):
@@ -244,15 +264,41 @@ class TestGetTopics:
 
 # ── API: /api/metrics/upload ─────────────────────────────────────────────────────
 
+
 class TestUploadEndpoint:
     def test_upload_csv(self, client):
-        csv_bytes = _write_csv([
-            ["视频描述", "视频ID", "发布时间", "完播率", "平均播放时长",
-             "播放量", "推荐", "喜欢", "评论量", "分享量", "关注量",
-             "转发聊天和朋友圈"],
-            ["原来是能吃", "export/abc", "2026/06/25", "28.64%", "10秒",
-             "406", "2", "2", "1", "0", "0", "0"],
-        ])
+        csv_bytes = _write_csv(
+            [
+                [
+                    "视频描述",
+                    "视频ID",
+                    "发布时间",
+                    "完播率",
+                    "平均播放时长",
+                    "播放量",
+                    "推荐",
+                    "喜欢",
+                    "评论量",
+                    "分享量",
+                    "关注量",
+                    "转发聊天和朋友圈",
+                ],
+                [
+                    "原来是能吃",
+                    "export/abc",
+                    "2026/06/25",
+                    "28.64%",
+                    "10秒",
+                    "406",
+                    "2",
+                    "2",
+                    "1",
+                    "0",
+                    "0",
+                    "0",
+                ],
+            ]
+        )
         resp = client.post(
             "/api/metrics/upload",
             files={"file": ("test_weixin.csv", csv_bytes, "text/csv")},
@@ -263,22 +309,57 @@ class TestUploadEndpoint:
 
     def test_upload_xlsx(self, client, tmp_path):
         from openpyxl import Workbook
+
         wb = Workbook()
         ws = wb.active
         ws.append(["最多导出排序后前1000条笔记"])
-        ws.append(["笔记标题", "首次发布时间", "体裁", "曝光", "观看量",
-                    "封面点击率", "点赞", "评论", "收藏", "涨粉", "分享",
-                    "人均观看时长", "弹幕"])
-        ws.append(["小红书测试", "2026年06月25日14时50分00秒", "视频",
-                    5000, 300, "6.50%", 25, 8, 12, 3, 5, "15.20秒", 2])
+        ws.append(
+            [
+                "笔记标题",
+                "首次发布时间",
+                "体裁",
+                "曝光",
+                "观看量",
+                "封面点击率",
+                "点赞",
+                "评论",
+                "收藏",
+                "涨粉",
+                "分享",
+                "人均观看时长",
+                "弹幕",
+            ]
+        )
+        ws.append(
+            [
+                "小红书测试",
+                "2026年06月25日14时50分00秒",
+                "视频",
+                5000,
+                300,
+                "6.50%",
+                25,
+                8,
+                12,
+                3,
+                5,
+                "15.20秒",
+                2,
+            ]
+        )
         xlsx_path = tmp_path / "test.xlsx"
         wb.save(xlsx_path)
         xlsx_bytes = xlsx_path.read_bytes()
 
         resp = client.post(
             "/api/metrics/upload",
-            files={"file": ("小红书_data.xlsx", xlsx_bytes,
-                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+            files={
+                "file": (
+                    "小红书_data.xlsx",
+                    xlsx_bytes,
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                )
+            },
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -286,6 +367,7 @@ class TestUploadEndpoint:
 
 
 # ── API: /api/metrics/overview ────────────────────────────────────────────────────
+
 
 class TestOverviewEndpoint:
     def test_overview_returns_expected_keys(self, client, tmp_path):
@@ -304,6 +386,7 @@ class TestOverviewEndpoint:
 
 # ── API: /api/metrics/videos ─────────────────────────────────────────────────────
 
+
 class TestVideosEndpoint:
     def test_videos_returns_items_and_total(self, client, tmp_path):
         db_path = tmp_path / "project_root" / "data" / "metrics.db"
@@ -320,6 +403,7 @@ class TestVideosEndpoint:
 
 # ── API: /api/metrics/topics ─────────────────────────────────────────────────────
 
+
 class TestTopicsEndpoint:
     def test_topics_returns_list(self, client, tmp_path):
         db_path = tmp_path / "project_root" / "data" / "metrics.db"
@@ -334,18 +418,44 @@ class TestTopicsEndpoint:
 
 # ── API: /api/metrics/scan ───────────────────────────────────────────────────────
 
+
 class TestScanEndpoint:
     def test_scan_imports_csv_files(self, client, tmp_path):
         # Create a CSV file in the data/ dir
         data_dir = tmp_path / "project_root" / "data" / "weixin" / "2026-6-25"
         data_dir.mkdir(parents=True, exist_ok=True)
-        csv_bytes = _write_csv([
-            ["视频描述", "视频ID", "发布时间", "完播率", "平均播放时长",
-             "播放量", "推荐", "喜欢", "评论量", "分享量", "关注量",
-             "转发聊天和朋友圈"],
-            ["扫描测试视频", "export/scan1", "2026/06/25", "15%", "8秒",
-             "100", "1", "5", "0", "0", "0", "0"],
-        ])
+        csv_bytes = _write_csv(
+            [
+                [
+                    "视频描述",
+                    "视频ID",
+                    "发布时间",
+                    "完播率",
+                    "平均播放时长",
+                    "播放量",
+                    "推荐",
+                    "喜欢",
+                    "评论量",
+                    "分享量",
+                    "关注量",
+                    "转发聊天和朋友圈",
+                ],
+                [
+                    "扫描测试视频",
+                    "export/scan1",
+                    "2026/06/25",
+                    "15%",
+                    "8秒",
+                    "100",
+                    "1",
+                    "5",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                ],
+            ]
+        )
         (data_dir / "test_weixin.csv").write_bytes(csv_bytes)
 
         resp = client.post("/api/metrics/scan")
@@ -357,20 +467,20 @@ class TestScanEndpoint:
 
 # ── Integration: real data directory ────────────────────────────────────────────
 
+
 def test_scan_real_data_directory():
     """Test scanning the actual data/ directory if it exists."""
-    from pathlib import Path
     import shutil
 
     real_data = Path(__file__).resolve().parent.parent / "data"
     if not real_data.exists():
         import pytest
+
         pytest.skip("data/ directory not found")
 
     # Create app with temp root
     from apps.control_plane.app import create_app
     from fastapi.testclient import TestClient
-    import tempfile
 
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -415,5 +525,7 @@ def test_scan_real_data_directory():
         assert resp.status_code == 200
 
         # 6. Search should work
-        resp = client.get("/api/metrics/videos?search=%E8%8D%94%E6%9E%9D%E8%8F%8C")  # 荔枝菌
+        resp = client.get(
+            "/api/metrics/videos?search=%E8%8D%94%E6%9E%9D%E8%8F%8C"
+        )  # 荔枝菌
         assert resp.status_code == 200

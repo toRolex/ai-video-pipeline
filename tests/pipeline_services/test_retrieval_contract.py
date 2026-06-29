@@ -1,6 +1,5 @@
 """Tests for retrieval_contract — SegmentRecord, RetrievalRequest, RetrievalTrace."""
 
-
 from packages.pipeline_services.retrieval_contract import (
     RetrievalRequest,
     RetrievalTrace,
@@ -160,6 +159,7 @@ class TestRetrievalTrace:
     def test_operator_decision_values(self) -> None:
         from typing import get_args
         from packages.pipeline_services.retrieval_contract import RetrievalTrace
+
         Decision = get_args(RetrievalTrace.model_fields["operator_decision"].annotation)
         for decision in Decision:
             trace = RetrievalTrace(request_id="r", operator_decision=decision)

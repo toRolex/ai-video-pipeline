@@ -1,4 +1,5 @@
 """SQLite-backed metrics store with CSV (微信视频号) and XLSX (小红书) import."""
+
 from __future__ import annotations
 
 import csv
@@ -74,13 +75,21 @@ _XHS_MAP: dict[str, str] = {
 }
 
 _INT_FIELDS = {
-    "plays", "likes", "comments", "shares", "followers_gained",
-    "exposure", "favorites", "danmaku", "forward_count",
+    "plays",
+    "likes",
+    "comments",
+    "shares",
+    "followers_gained",
+    "exposure",
+    "favorites",
+    "danmaku",
+    "forward_count",
 }
 _REAL_FIELDS = {"completion_rate", "avg_watch_duration", "cover_click_rate"}
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
+
 
 def _strip_percent(val: str) -> float | None:
     """`28.64%` -> 28.64; None/empty -> None."""
@@ -135,6 +144,7 @@ def _safe_float(val: Any) -> float | None:
 
 # ── MetricsStore ───────────────────────────────────────────────────────────────
 
+
 class MetricsStore:
     """SQLite store for video metrics with CSV / XLSX import."""
 
@@ -160,7 +170,9 @@ class MetricsStore:
 
     # -- Import: CSV (微信视频号) -------------------------------------------
 
-    def import_csv(self, content: bytes, platform: str = "weixin", filename: str = "") -> dict[str, int]:
+    def import_csv(
+        self, content: bytes, platform: str = "weixin", filename: str = ""
+    ) -> dict[str, int]:
         """Import a UTF-8-BOM CSV from 微信视频号 export.
 
         Returns ``{"inserted": N, "updated": M}``.
@@ -314,7 +326,8 @@ class MetricsStore:
 
         if existing:
             set_parts = ", ".join(
-                f"{c} = :{c}" for c in sorted(rec.keys())
+                f"{c} = :{c}"
+                for c in sorted(rec.keys())
                 if c not in ("platform", "title", "publish_date")
             )
             conn.execute(
@@ -335,7 +348,9 @@ class MetricsStore:
 
     # ── Aggregation queries ───────────────────────────────────────────────────────
 
-    def get_overview(self, days: int = 7, platform: str | None = None) -> dict[str, Any]:
+    def get_overview(
+        self, days: int = 7, platform: str | None = None
+    ) -> dict[str, Any]:
         """Aggregate metrics for the last *days* days.
 
         Returns totals, average completion rate, and per-day breakdown.
@@ -391,13 +406,13 @@ class MetricsStore:
     ) -> dict[str, Any]:
         """Paginated, sorted video list with optional search and platform filter."""
         order_map = {
-            "plays_desc":        "plays DESC",
-            "plays_asc":         "plays ASC",
-            "date_desc":         "publish_date DESC",
-            "date_asc":          "publish_date ASC",
-            "completion_desc":   "completion_rate DESC",
-            "likes_desc":        "likes DESC",
-            "followers_desc":    "followers_gained DESC",
+            "plays_desc": "plays DESC",
+            "plays_asc": "plays ASC",
+            "date_desc": "publish_date DESC",
+            "date_asc": "publish_date ASC",
+            "completion_desc": "completion_rate DESC",
+            "likes_desc": "likes DESC",
+            "followers_desc": "followers_gained DESC",
         }
         order_clause = order_map.get(sort_by, "plays DESC")
 
@@ -443,26 +458,108 @@ class MetricsStore:
         return {"items": items, "total": total, "page": page, "page_size": page_size}
 
     _STOPWORDS: set[str] = {
-        "的", "了", "在", "是", "我", "有", "和", "就", "不", "人", "都",
-        "一", "一个", "上", "也", "很", "到", "说", "要", "去", "你", "会",
-        "着", "没有", "看", "好", "自己", "这", "他", "她", "它", "们",
-        "那", "这个", "那个", "什么", "怎么", "可以", "没", "什么", "还",
-        "把", "让", "跟", "从", "被", "用", "对", "做", "来", "给", "着",
-        "吗", "吧", "啊", "呢", "哦", "嗯", "啦", "哈", "呀", "嘛",
-        "而", "但", "可是", "但是", "因为", "所以", "如果", "虽然", "不过",
-        "或者", "还是", "就是", "已经", "可以", "非常", "比较", "可能",
-        "而且", "然后", "其实", "只是", "真是", "真的", "真的", "这个",
-        "那个", "一下", "出来", "起来", "下来", "上去", "过来", "过去",
+        "的",
+        "了",
+        "在",
+        "是",
+        "我",
+        "有",
+        "和",
+        "就",
+        "不",
+        "人",
+        "都",
+        "一",
+        "一个",
+        "上",
+        "也",
+        "很",
+        "到",
+        "说",
+        "要",
+        "去",
+        "你",
+        "会",
+        "着",
+        "没有",
+        "看",
+        "好",
+        "自己",
+        "这",
+        "他",
+        "她",
+        "它",
+        "们",
+        "那",
+        "这个",
+        "那个",
+        "什么",
+        "怎么",
+        "可以",
+        "没",
+        "什么",
+        "还",
+        "把",
+        "让",
+        "跟",
+        "从",
+        "被",
+        "用",
+        "对",
+        "做",
+        "来",
+        "给",
+        "着",
+        "吗",
+        "吧",
+        "啊",
+        "呢",
+        "哦",
+        "嗯",
+        "啦",
+        "哈",
+        "呀",
+        "嘛",
+        "而",
+        "但",
+        "可是",
+        "但是",
+        "因为",
+        "所以",
+        "如果",
+        "虽然",
+        "不过",
+        "或者",
+        "还是",
+        "就是",
+        "已经",
+        "可以",
+        "非常",
+        "比较",
+        "可能",
+        "而且",
+        "然后",
+        "其实",
+        "只是",
+        "真是",
+        "真的",
+        "真的",
+        "这个",
+        "那个",
+        "一下",
+        "出来",
+        "起来",
+        "下来",
+        "上去",
+        "过来",
+        "过去",
     }
 
     @classmethod
     def _extract_keywords(cls, title: str) -> list[str]:
         """Split a title on punctuation/whitespace and return non-trivial tokens."""
         tokens = re.split(r"[#，,。！？、\s]+", title.strip())
-        return [
-            t for t in tokens
-            if len(t) >= 2 and t not in cls._STOPWORDS
-        ]
+        return [t for t in tokens if len(t) >= 2 and t not in cls._STOPWORDS]
 
     def get_topics(
         self,
@@ -497,10 +594,15 @@ class MetricsStore:
         for r in rows:
             kw_list = self._extract_keywords(r["title"])
             for kw in kw_list:
-                bucket = agg.setdefault(kw, {
-                    "total_plays": 0, "video_count": 0,
-                    "_sum_cr": 0.0, "_count_cr": 0,
-                })
+                bucket = agg.setdefault(
+                    kw,
+                    {
+                        "total_plays": 0,
+                        "video_count": 0,
+                        "_sum_cr": 0.0,
+                        "_count_cr": 0,
+                    },
+                )
                 bucket["total_plays"] += r["plays"] or 0
                 bucket["video_count"] += 1
                 if r["completion_rate"] is not None:
@@ -510,12 +612,14 @@ class MetricsStore:
         topics = []
         for kw, v in agg.items():
             avg_cr = round(v["_sum_cr"] / v["_count_cr"], 2) if v["_count_cr"] else 0.0
-            topics.append({
-                "keyword": kw,
-                "total_plays": v["total_plays"],
-                "video_count": v["video_count"],
-                "avg_completion": avg_cr,
-            })
+            topics.append(
+                {
+                    "keyword": kw,
+                    "total_plays": v["total_plays"],
+                    "video_count": v["video_count"],
+                    "avg_completion": avg_cr,
+                }
+            )
 
         topics.sort(key=lambda x: x["total_plays"], reverse=True)
         return topics[:limit]

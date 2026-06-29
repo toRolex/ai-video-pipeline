@@ -3,7 +3,11 @@
 from packages.provider_config.tts_config import TTSConfig, TTSConfigManager
 from packages.pipeline_services.tts_monitor import TTSRequestLog, TTSMonitor
 from packages.pipeline_services.tts_provider import (
-    TTSError, TTSRetryableError, TTSBlockedError, TTSQuotaExceededError, MiMoTTSProvider
+    TTSError,
+    TTSRetryableError,
+    TTSBlockedError,
+    TTSQuotaExceededError,
+    MiMoTTSProvider,
 )
 from datetime import datetime
 
@@ -11,13 +15,20 @@ from datetime import datetime
 class TestTTSConfigWhiteBox:
     def test_to_dict_covers_all_fields(self):
         config = TTSConfig(
-            model="test", voice="v", fallback_voice="fv",
-            randomize_voice=False, random_voices=["A"],
-            voice_design_prompt="vdp", style_prompt="sp",
-            audio_format="wav", sample_rate=44100,
-            bitrate=192000, channel=2,
-            enable_request_logging=True, enable_performance_metrics=False,
-            log_audio_duration=False
+            model="test",
+            voice="v",
+            fallback_voice="fv",
+            randomize_voice=False,
+            random_voices=["A"],
+            voice_design_prompt="vdp",
+            style_prompt="sp",
+            audio_format="wav",
+            sample_rate=44100,
+            bitrate=192000,
+            channel=2,
+            enable_request_logging=True,
+            enable_performance_metrics=False,
+            log_audio_duration=False,
         )
         data = config.to_dict()
         assert len(data) == 26
@@ -43,13 +54,20 @@ class TestTTSConfigWhiteBox:
 
     def test_with_defaults_preserves_all_set_values(self):
         config = TTSConfig(
-            model="m", voice="v", fallback_voice="fv",
-            randomize_voice=False, random_voices=["A"],
-            voice_design_prompt="vdp", style_prompt="sp",
-            audio_format="wav", sample_rate=44100,
-            bitrate=192000, channel=2,
-            enable_request_logging=True, enable_performance_metrics=False,
-            log_audio_duration=False
+            model="m",
+            voice="v",
+            fallback_voice="fv",
+            randomize_voice=False,
+            random_voices=["A"],
+            voice_design_prompt="vdp",
+            style_prompt="sp",
+            audio_format="wav",
+            sample_rate=44100,
+            bitrate=192000,
+            channel=2,
+            enable_request_logging=True,
+            enable_performance_metrics=False,
+            log_audio_duration=False,
         )
         with_defaults = config.with_defaults()
         assert with_defaults.model == "m"
@@ -82,12 +100,21 @@ class TestTTSMonitorWhiteBox:
     def test_record_request_stores_in_memory(self, tmp_path):
         monitor = TTSMonitor(log_dir=str(tmp_path))
         log = TTSRequestLog(
-            id="r1", task_id="t1", project_id="p1",
-            timestamp=datetime.now(), model="m", voice_id="v",
-            style_prompt="s", text_length=100, success=True,
-            audio_duration_ms=1000, latency_ms=500,
-            error_type=None, error_message=None,
-            attempt_count=1, final_voice_id="v"
+            id="r1",
+            task_id="t1",
+            project_id="p1",
+            timestamp=datetime.now(),
+            model="m",
+            voice_id="v",
+            style_prompt="s",
+            text_length=100,
+            success=True,
+            audio_duration_ms=1000,
+            latency_ms=500,
+            error_type=None,
+            error_message=None,
+            attempt_count=1,
+            final_voice_id="v",
         )
         monitor.record_request(log)
         assert len(monitor._logs) == 1
@@ -96,17 +123,25 @@ class TestTTSMonitorWhiteBox:
     def test_get_metrics_calculates_correctly(self, tmp_path):
         monitor = TTSMonitor(log_dir=str(tmp_path))
         for i in range(10):
-            monitor.record_request(TTSRequestLog(
-                id=f"r{i}", task_id=f"t{i}", project_id="p1",
-                timestamp=datetime.now(), model="m", voice_id="v",
-                style_prompt="s", text_length=100,
-                success=i < 7,
-                audio_duration_ms=1000 if i < 7 else None,
-                latency_ms=500 + i * 100,
-                error_type="timeout" if i >= 7 else None,
-                error_message="err" if i >= 7 else None,
-                attempt_count=1, final_voice_id="v"
-            ))
+            monitor.record_request(
+                TTSRequestLog(
+                    id=f"r{i}",
+                    task_id=f"t{i}",
+                    project_id="p1",
+                    timestamp=datetime.now(),
+                    model="m",
+                    voice_id="v",
+                    style_prompt="s",
+                    text_length=100,
+                    success=i < 7,
+                    audio_duration_ms=1000 if i < 7 else None,
+                    latency_ms=500 + i * 100,
+                    error_type="timeout" if i >= 7 else None,
+                    error_message="err" if i >= 7 else None,
+                    attempt_count=1,
+                    final_voice_id="v",
+                )
+            )
         metrics = monitor.get_metrics()
         assert metrics.total_requests == 10
         assert metrics.success_count == 7
@@ -116,22 +151,44 @@ class TestTTSMonitorWhiteBox:
 
     def test_get_logs_filters_by_status(self, tmp_path):
         monitor = TTSMonitor(log_dir=str(tmp_path))
-        monitor.record_request(TTSRequestLog(
-            id="r1", task_id="t1", project_id="p1",
-            timestamp=datetime.now(), model="m", voice_id="v",
-            style_prompt="s", text_length=100, success=True,
-            audio_duration_ms=1000, latency_ms=500,
-            error_type=None, error_message=None,
-            attempt_count=1, final_voice_id="v"
-        ))
-        monitor.record_request(TTSRequestLog(
-            id="r2", task_id="t2", project_id="p1",
-            timestamp=datetime.now(), model="m", voice_id="v",
-            style_prompt="s", text_length=100, success=False,
-            audio_duration_ms=None, latency_ms=500,
-            error_type="timeout", error_message="err",
-            attempt_count=1, final_voice_id="v"
-        ))
+        monitor.record_request(
+            TTSRequestLog(
+                id="r1",
+                task_id="t1",
+                project_id="p1",
+                timestamp=datetime.now(),
+                model="m",
+                voice_id="v",
+                style_prompt="s",
+                text_length=100,
+                success=True,
+                audio_duration_ms=1000,
+                latency_ms=500,
+                error_type=None,
+                error_message=None,
+                attempt_count=1,
+                final_voice_id="v",
+            )
+        )
+        monitor.record_request(
+            TTSRequestLog(
+                id="r2",
+                task_id="t2",
+                project_id="p1",
+                timestamp=datetime.now(),
+                model="m",
+                voice_id="v",
+                style_prompt="s",
+                text_length=100,
+                success=False,
+                audio_duration_ms=None,
+                latency_ms=500,
+                error_type="timeout",
+                error_message="err",
+                attempt_count=1,
+                final_voice_id="v",
+            )
+        )
         assert len(monitor.get_logs()) == 2
         assert len(monitor.get_logs(status="success")) == 1
         assert len(monitor.get_logs(status="failed")) == 1
@@ -159,7 +216,9 @@ class TestMiMoTTSProviderWhiteBox:
 
     def test_build_voicedesign_request_no_voice(self):
         provider = MiMoTTSProvider(api_key="test")
-        config = TTSConfig(model="mimo-v2.5-tts-voicedesign", voice_design_prompt="prompt")
+        config = TTSConfig(
+            model="mimo-v2.5-tts-voicedesign", voice_design_prompt="prompt"
+        )
         request = provider._build_request("text", config)
         assert "voice" not in request.get("audio", {})
         assert request["messages"][0]["content"] == "prompt"

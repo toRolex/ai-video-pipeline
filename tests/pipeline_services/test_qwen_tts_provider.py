@@ -93,7 +93,10 @@ class TestQwenTTSProvider:
 
         with patch.object(provider, "_http_post") as mock_post:
             mock_resp = Mock()
-            mock_resp.json.return_value = {"code": "InvalidApiKey", "message": "bad key"}
+            mock_resp.json.return_value = {
+                "code": "InvalidApiKey",
+                "message": "bad key",
+            }
             mock_resp.raise_for_status = Mock()
             mock_post.return_value = mock_resp
 

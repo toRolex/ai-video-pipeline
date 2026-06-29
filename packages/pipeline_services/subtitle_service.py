@@ -32,7 +32,7 @@ SUBTITLE_SILENCE_SNAP_SECONDS: float = 0.25
 # ---------------------------------------------------------------------------
 
 SRT_ALLOWED_CHAR_RE: re.Pattern = re.compile(
-    r"[^一-鿿A-Za-z0-9，。！？、；：,.!?%()\-\s""''《》【】…·]"
+    r"[^一-鿿A-Za-z0-9，。！？、；：,.!?%()\-\s" "''《》【】…·]"
 )
 SRT_ORPHAN_QUESTION_RE: re.Pattern = re.compile(
     r"(?<![一-鿿A-Za-z0-9])[?？]+(?![一-鿿A-Za-z0-9])"
@@ -42,27 +42,82 @@ SRT_ORPHAN_QUESTION_RE: re.Pattern = re.compile(
 # Character mapping (traditional → simplified Chinese)
 # ---------------------------------------------------------------------------
 
-TRADITIONAL_CHAR_MAP: dict = str.maketrans({
-    "這": "这", "個": "个", "們": "们", "妳": "你", "說": "说",
-    "為": "为", "麼": "么", "裡": "里", "後": "后", "來": "来",
-    "會": "会", "買": "买", "實": "实", "體": "体", "無": "无",
-    "與": "与", "對": "对", "開": "开", "見": "见", "點": "点",
-    "時": "时", "間": "间", "種": "种", "醫": "医", "專": "专",
-    "氣": "气", "價": "价", "貼": "贴", "臉": "脸", "術": "术",
-    "應": "应", "號": "号", "車": "车", "門": "门", "發": "发",
-    "現": "现", "長": "长", "頭": "头", "臺": "台", "嗎": "吗",
-    "讓": "让", "將": "将", "萬": "万", "網": "网", "廣": "广",
-    "過": "过", "處": "处", "東": "东", "產": "产", "復": "复",
-    "國": "国", "從": "从", "於": "于", "書": "书", "業": "业",
-    "風": "风", "觸": "触", "覺": "觉", "線": "线", "聲": "声",
-    "學": "学", "補": "补", "機": "机", "顏": "颜", "變": "变",
-    "曬": "晒",
-})
+TRADITIONAL_CHAR_MAP: dict = str.maketrans(
+    {
+        "這": "这",
+        "個": "个",
+        "們": "们",
+        "妳": "你",
+        "說": "说",
+        "為": "为",
+        "麼": "么",
+        "裡": "里",
+        "後": "后",
+        "來": "来",
+        "會": "会",
+        "買": "买",
+        "實": "实",
+        "體": "体",
+        "無": "无",
+        "與": "与",
+        "對": "对",
+        "開": "开",
+        "見": "见",
+        "點": "点",
+        "時": "时",
+        "間": "间",
+        "種": "种",
+        "醫": "医",
+        "專": "专",
+        "氣": "气",
+        "價": "价",
+        "貼": "贴",
+        "臉": "脸",
+        "術": "术",
+        "應": "应",
+        "號": "号",
+        "車": "车",
+        "門": "门",
+        "發": "发",
+        "現": "现",
+        "長": "长",
+        "頭": "头",
+        "臺": "台",
+        "嗎": "吗",
+        "讓": "让",
+        "將": "将",
+        "萬": "万",
+        "網": "网",
+        "廣": "广",
+        "過": "过",
+        "處": "处",
+        "東": "东",
+        "產": "产",
+        "復": "复",
+        "國": "国",
+        "從": "从",
+        "於": "于",
+        "書": "书",
+        "業": "业",
+        "風": "风",
+        "觸": "触",
+        "覺": "觉",
+        "線": "线",
+        "聲": "声",
+        "學": "学",
+        "補": "补",
+        "機": "机",
+        "顏": "颜",
+        "變": "变",
+        "曬": "晒",
+    }
+)
 
 
 # ---------------------------------------------------------------------------
 # Package-level helper (kept as standalone for discoverability by tests)
 # ---------------------------------------------------------------------------
+
 
 def detect_silence_points(audio_path: Path) -> list[float]:
     """Detect silence midpoints in an audio file using ffmpeg silencedetect.
@@ -106,6 +161,7 @@ def detect_silence_points(audio_path: Path) -> list[float]:
 # ---------------------------------------------------------------------------
 # SubtitleService
 # ---------------------------------------------------------------------------
+
 
 class SubtitleService:
     """Produces .srt subtitle files from script text and audio.
@@ -169,7 +225,7 @@ class SubtitleService:
 
     @staticmethod
     def subtitle_weight(text: str) -> int:
-        visible = re.sub(r'[\s，。！？、；：,.!?%()\-\""''《》【】…·]', "", text or "")
+        visible = re.sub(r'[\s，。！？、；：,.!?%()\-\""' "《》【】…·]", "", text or "")
         return max(1, len(visible))
 
     # ---- sanitization ----
@@ -195,16 +251,28 @@ class SubtitleService:
     def clean_script(self, script_text: str) -> str:
         """Remove stage-direction markup from a full script before chunking."""
         cleaned = re.sub(
-            r"<\s*break\b[^>]*\/?\s*>", "", script_text or "", flags=re.IGNORECASE,
+            r"<\s*break\b[^>]*\/?\s*>",
+            "",
+            script_text or "",
+            flags=re.IGNORECASE,
         )
         cleaned = re.sub(
-            r"\[(?:停顿|暂停|静音|pause|break)[^\]]*\]", "", cleaned, flags=re.IGNORECASE,
+            r"\[(?:停顿|暂停|静音|pause|break)[^\]]*\]",
+            "",
+            cleaned,
+            flags=re.IGNORECASE,
         )
         cleaned = re.sub(
-            r"（(?:停顿|暂停|静音|pause|break)[^）]*）", "", cleaned, flags=re.IGNORECASE,
+            r"（(?:停顿|暂停|静音|pause|break)[^）]*）",
+            "",
+            cleaned,
+            flags=re.IGNORECASE,
         )
         cleaned = re.sub(
-            r"\((?:停顿|暂停|静音|pause|break)[^)]*\)", "", cleaned, flags=re.IGNORECASE,
+            r"\((?:停顿|暂停|静音|pause|break)[^)]*\)",
+            "",
+            cleaned,
+            flags=re.IGNORECASE,
         )
         cleaned = self.sanitize_text(cleaned)
         return re.sub(r"\s+", "", cleaned).strip()
@@ -287,9 +355,14 @@ class SubtitleService:
         for i in range(len(snapped) - 1):
             boundary = float(snapped[i][2])
             nearest = min(
-                silence_points, key=lambda p: abs(p - boundary), default=None,
+                silence_points,
+                key=lambda p: abs(p - boundary),
+                default=None,
             )
-            if nearest is None or abs(nearest - boundary) > SUBTITLE_SILENCE_SNAP_SECONDS:
+            if (
+                nearest is None
+                or abs(nearest - boundary) > SUBTITLE_SILENCE_SNAP_SECONDS
+            ):
                 continue
             if (
                 nearest - float(snapped[i][1]) < min_gap

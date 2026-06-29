@@ -56,11 +56,14 @@ class TestConfigPersistence:
         assert response.json()["model"] == "persisted-model"
 
     def test_partial_update_preserves_other_fields(self, client):
-        client.put("/api/tts/config", json={
-            "model": "original-model",
-            "voice": "original-voice",
-            "style_prompt": "original-style",
-        })
+        client.put(
+            "/api/tts/config",
+            json={
+                "model": "original-model",
+                "voice": "original-voice",
+                "style_prompt": "original-style",
+            },
+        )
 
         client.put("/api/tts/config", json={"model": "updated-model"})
 

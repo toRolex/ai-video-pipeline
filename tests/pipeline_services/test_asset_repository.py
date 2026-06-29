@@ -40,14 +40,24 @@ def test_query_returns_empty_for_wrong_product(repo):
 
 
 def test_increment_usage(repo):
-    record = AssetRecord(asset_id="test_003", file_path="/d.mp4", category=Category.MACRO, product="荔枝菌")
+    record = AssetRecord(
+        asset_id="test_003",
+        file_path="/d.mp4",
+        category=Category.MACRO,
+        product="荔枝菌",
+    )
     repo.insert(record)
     repo.increment_usage("test_003")
     assert repo.get_usage_count("test_003") == 1
 
 
 def test_disabled_assets_not_returned(repo):
-    record = AssetRecord(asset_id="test_004", file_path="/d.mp4", category=Category.MACRO, product="荔枝菌")
+    record = AssetRecord(
+        asset_id="test_004",
+        file_path="/d.mp4",
+        category=Category.MACRO,
+        product="荔枝菌",
+    )
     repo.insert(record)
     repo.update_status("test_004", "disabled")
     results = repo.query_by_category("荔枝菌", Category.MACRO)
@@ -56,7 +66,14 @@ def test_disabled_assets_not_returned(repo):
 
 def test_usage_sort_order(repo):
     for i in range(3):
-        repo.insert(AssetRecord(asset_id=f"a{i}", file_path=f"/d{i}.mp4", category=Category.MACRO, product="荔枝菌"))
+        repo.insert(
+            AssetRecord(
+                asset_id=f"a{i}",
+                file_path=f"/d{i}.mp4",
+                category=Category.MACRO,
+                product="荔枝菌",
+            )
+        )
     repo.increment_usage("a1")
     repo.increment_usage("a1")
     repo.increment_usage("a0")

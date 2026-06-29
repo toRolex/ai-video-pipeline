@@ -20,6 +20,7 @@ from packages.pipeline_services.phase_orchestrator import (
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture()
 def tmp_root(tmp_path: Path) -> Path:
     """Create a minimal root_dir layout (workspace/projects/...)."""
@@ -62,6 +63,7 @@ def orchestrator() -> PhaseOrchestrator:
 # PhaseContext
 # ---------------------------------------------------------------------------
 
+
 class TestPhaseContext:
     def test_fields(self, ctx: PhaseContext, project_dir: Path, tmp_root: Path):
         assert ctx.job_id == "job-001"
@@ -85,11 +87,17 @@ class TestPhaseContext:
 # to_url_path helper
 # ---------------------------------------------------------------------------
 
+
 class TestToUrlPath:
     def test_posix(self, tmp_path: Path):
         workspace = tmp_path / "workspace"
-        file_path = workspace / "projects" / "p" / "runtime" / "jobs" / "j1" / "口播文案.txt"
-        assert to_url_path(file_path, workspace) == "projects/p/runtime/jobs/j1/口播文案.txt"
+        file_path = (
+            workspace / "projects" / "p" / "runtime" / "jobs" / "j1" / "口播文案.txt"
+        )
+        assert (
+            to_url_path(file_path, workspace)
+            == "projects/p/runtime/jobs/j1/口播文案.txt"
+        )
 
     def test_slash_separated(self, tmp_path: Path):
         workspace = tmp_path / "workspace"
@@ -100,6 +108,7 @@ class TestToUrlPath:
 # ---------------------------------------------------------------------------
 # PhaseOrchestrator construction
 # ---------------------------------------------------------------------------
+
 
 class TestPhaseOrchestratorInit:
     def test_accepts_five_deps(self):
@@ -124,12 +133,17 @@ class TestPhaseOrchestratorInit:
 # run_phase dispatch
 # ---------------------------------------------------------------------------
 
+
 class TestRunPhase:
-    def test_unknown_phase_raises(self, orchestrator: PhaseOrchestrator, ctx: PhaseContext):
+    def test_unknown_phase_raises(
+        self, orchestrator: PhaseOrchestrator, ctx: PhaseContext
+    ):
         with pytest.raises(ValueError, match="Unknown phase"):
             orchestrator.run_phase("bogus_phase", ctx)
 
-    def test_known_phase_returns_list(self, orchestrator: PhaseOrchestrator, ctx: PhaseContext):
+    def test_known_phase_returns_list(
+        self, orchestrator: PhaseOrchestrator, ctx: PhaseContext
+    ):
         """run_phase with script_generating should return a list (even if empty)."""
         result = orchestrator.run_phase("script_generating", ctx)
         assert isinstance(result, list)
@@ -138,6 +152,7 @@ class TestRunPhase:
 # ---------------------------------------------------------------------------
 # _run_script — manual_script path
 # ---------------------------------------------------------------------------
+
 
 class TestRunScriptManual:
     def test_manual_script_writes_files_and_returns_artifacts(
@@ -173,6 +188,7 @@ class TestRunScriptManual:
 # _run_script — LLM generation path
 # ---------------------------------------------------------------------------
 
+
 class TestRunScriptLLM:
     def test_llm_generation_calls_bridge_and_returns_artifacts(
         self,
@@ -195,7 +211,10 @@ class TestRunScriptLLM:
         artifacts = orchestrator.run_phase("script_generating", ctx)
 
         orchestrator._script_bridge.generate.assert_called_once_with(
-            product="羊肚菌", output_dir=job_dir, mock=False, language="mandarin",
+            product="羊肚菌",
+            output_dir=job_dir,
+            mock=False,
+            language="mandarin",
         )
         assert len(artifacts) == 2
         assert all(isinstance(a, ArtifactPointer) for a in artifacts)
@@ -204,6 +223,7 @@ class TestRunScriptLLM:
 # ---------------------------------------------------------------------------
 # _run_script — cover title auto-generation
 # ---------------------------------------------------------------------------
+
 
 class TestRunScriptCoverTitle:
     @patch("packages.pipeline_services.phase_orchestrator.AppConfigManager")
@@ -222,14 +242,19 @@ class TestRunScriptCoverTitle:
         job_json_dir.mkdir(parents=True, exist_ok=True)
         job_json_path = job_json_dir / f"{ctx.job_id}.json"
         job_json_path.write_text(
-            json.dumps({"job_id": ctx.job_id, "phase": "script_generating"}, ensure_ascii=False),
+            json.dumps(
+                {"job_id": ctx.job_id, "phase": "script_generating"}, ensure_ascii=False
+            ),
             encoding="utf-8",
         )
 
         # Mock ScriptGenerator
         mock_gen = MagicMock()
         mock_sg_cls.return_value = mock_gen
-        mock_gen.generate_cover_title.return_value = {"text": "羊肚菌美味", "highlight_words": ["羊肚菌"]}
+        mock_gen.generate_cover_title.return_value = {
+            "text": "羊肚菌美味",
+            "highlight_words": ["羊肚菌"],
+        }
 
         orchestrator.run_phase("script_generating", ctx)
 
@@ -253,11 +278,14 @@ class TestRunScriptCoverTitle:
         job_json_dir.mkdir(parents=True, exist_ok=True)
         job_json_path = job_json_dir / f"{ctx.job_id}.json"
         job_json_path.write_text(
-            json.dumps({
-                "job_id": ctx.job_id,
-                "phase": "script_generating",
-                "cover_title": {"text": "已有标题"},
-            }, ensure_ascii=False),
+            json.dumps(
+                {
+                    "job_id": ctx.job_id,
+                    "phase": "script_generating",
+                    "cover_title": {"text": "已有标题"},
+                },
+                ensure_ascii=False,
+            ),
             encoding="utf-8",
         )
 
@@ -296,8 +324,11 @@ class TestRunScriptCoverTitle:
 # _job_dir helper
 # ---------------------------------------------------------------------------
 
+
 class TestJobDir:
-    def test_returns_correct_path(self, orchestrator: PhaseOrchestrator, ctx: PhaseContext):
+    def test_returns_correct_path(
+        self, orchestrator: PhaseOrchestrator, ctx: PhaseContext
+    ):
         expected = ctx.project_dir / "runtime" / "jobs" / ctx.job_id
         assert orchestrator._job_dir(ctx) == expected
 
@@ -353,7 +384,15 @@ class TestRunTTSScriptDiscovery:
 
     def test_reads_script_from_txt(self, tmp_path: Path, ctx: PhaseContext):
         """Given a 口播文案.txt file, _run_tts reads it and calls synthesize."""
-        job_dir = tmp_path / "workspace" / "projects" / "proj-001" / "runtime" / "jobs" / "job-001"
+        job_dir = (
+            tmp_path
+            / "workspace"
+            / "projects"
+            / "proj-001"
+            / "runtime"
+            / "jobs"
+            / "job-001"
+        )
         job_dir.mkdir(parents=True)
         txt = job_dir / "口播文案.txt"
         txt.write_text("这是一段测试文案。", encoding="utf-8")
@@ -371,18 +410,31 @@ class TestRunTTSScriptDiscovery:
         assert artifacts[0].kind == "tts_audio"
         assert artifacts[0].size_bytes == 100
 
-    def test_reads_script_from_json_when_no_txt(self, tmp_path: Path, ctx: PhaseContext):
+    def test_reads_script_from_json_when_no_txt(
+        self, tmp_path: Path, ctx: PhaseContext
+    ):
         """Falls back to 口播文案.json if no .txt file."""
-        job_dir = tmp_path / "workspace" / "projects" / "proj-001" / "runtime" / "jobs" / "job-001"
+        job_dir = (
+            tmp_path
+            / "workspace"
+            / "projects"
+            / "proj-001"
+            / "runtime"
+            / "jobs"
+            / "job-001"
+        )
         job_dir.mkdir(parents=True)
         jfile = job_dir / "口播文案.json"
-        jfile.write_text(json.dumps({"text": "JSON 文案内容。"}, ensure_ascii=False), encoding="utf-8")
+        jfile.write_text(
+            json.dumps({"text": "JSON 文案内容。"}, ensure_ascii=False),
+            encoding="utf-8",
+        )
 
         mock_tts = MagicMock()
         mock_tts.synthesize.return_value = b"\x00" * 50
         orch = _make_orchestrator_with_tts_config(tts_provider=mock_tts)
 
-        artifacts = orch.run_phase("tts_generating", ctx)
+        orch.run_phase("tts_generating", ctx)
 
         mock_tts.synthesize.assert_called_once()
         assert mock_tts.synthesize.call_args[0][0] == "JSON 文案内容。"
@@ -494,7 +546,9 @@ class TestRunTTSConfigBuilding:
 
         mock_tts = MagicMock()
         mock_tts.synthesize.return_value = b"\x00"
-        orch = _make_orchestrator_with_tts_config(tts_provider=mock_tts, tts_config=custom_config)
+        orch = _make_orchestrator_with_tts_config(
+            tts_provider=mock_tts, tts_config=custom_config
+        )
 
         orch.run_phase("tts_generating", ctx)
 

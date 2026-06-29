@@ -19,17 +19,23 @@ _VISION_PROMPT = """你是一个菌菇视频素材分类助手。请识别这张
 
 
 class VisionClient:
-    def __init__(self, api_key: str = "", endpoint: str = "", model: str = "", provider: str = "") -> None:
+    def __init__(
+        self, api_key: str = "", endpoint: str = "", model: str = "", provider: str = ""
+    ) -> None:
         self.api_key = api_key or os.getenv("VISION_API_KEY", "")
         self.endpoint = endpoint or os.getenv("VISION_API_URL", "")
         self.model = model or os.getenv("VISION_MODEL", "")
         self.provider = provider or os.getenv("VISION_PROVIDER", "openai")
 
     def classify_frame(self, image_path: Path) -> dict:
-        logger.info(f"[Vision] 开始分类: {image_path.name}, provider={self.provider}, model={self.model}")
+        logger.info(
+            f"[Vision] 开始分类: {image_path.name}, provider={self.provider}, model={self.model}"
+        )
         image_b64 = base64.b64encode(image_path.read_bytes()).decode("utf-8")
         ext = image_path.suffix.lower().replace(".", "")
-        media_type = f"image/{ext}" if ext in ("jpg", "jpeg", "png", "webp") else "image/jpeg"
+        media_type = (
+            f"image/{ext}" if ext in ("jpg", "jpeg", "png", "webp") else "image/jpeg"
+        )
 
         import requests
 
@@ -37,7 +43,9 @@ class VisionClient:
             if self.provider == "claude":
                 payload, headers = self._build_claude_request(image_b64, media_type)
                 logger.debug(f"[Vision] 请求 Claude API: {self.endpoint}")
-                resp = requests.post(self.endpoint, json=payload, headers=headers, timeout=60)
+                resp = requests.post(
+                    self.endpoint, json=payload, headers=headers, timeout=60
+                )
                 resp.raise_for_status()
                 result = self._parse_claude_response(resp.json())
             else:
@@ -45,20 +53,30 @@ class VisionClient:
                 data_url = f"data:{media_type};base64,{image_b64}"
                 payload, headers = self._build_openai_request(data_url)
                 logger.debug(f"[Vision] 请求 OpenAI API: {self.endpoint}")
-                resp = requests.post(self.endpoint, json=payload, headers=headers, timeout=60)
+                resp = requests.post(
+                    self.endpoint, json=payload, headers=headers, timeout=60
+                )
                 resp.raise_for_status()
                 result = self._parse_openai_response(resp.json())
 
-            logger.info(f"[Vision] 分类成功: {image_path.name} → {result.get('category')} (置信度: {result.get('confidence', 0):.2f})")
+            logger.info(
+                f"[Vision] 分类成功: {image_path.name} → {result.get('category')} (置信度: {result.get('confidence', 0):.2f})"
+            )
             return result
         except requests.exceptions.Timeout:
-            logger.error(f"[Vision] 请求超时: {image_path.name}, endpoint={self.endpoint}")
+            logger.error(
+                f"[Vision] 请求超时: {image_path.name}, endpoint={self.endpoint}"
+            )
             raise
         except requests.exceptions.HTTPError as e:
-            logger.error(f"[Vision] HTTP 错误: {image_path.name}, status={e.response.status_code}, body={e.response.text[:200]}")
+            logger.error(
+                f"[Vision] HTTP 错误: {image_path.name}, status={e.response.status_code}, body={e.response.text[:200]}"
+            )
             raise
         except Exception as e:
-            logger.error(f"[Vision] 分类失败: {image_path.name}, error={type(e).__name__}: {e}")
+            logger.error(
+                f"[Vision] 分类失败: {image_path.name}, error={type(e).__name__}: {e}"
+            )
             raise
 
     def _build_openai_request(self, data_url: str) -> tuple[dict, dict]:
@@ -92,11 +110,16 @@ class VisionClient:
             raw_text = str(raw)
         try:
             result = json.loads(raw_text)
-            return {"category": result.get("category", ""), "confidence": float(result.get("confidence", 0.5))}
+            return {
+                "category": result.get("category", ""),
+                "confidence": float(result.get("confidence", 0.5)),
+            }
         except (json.JSONDecodeError, KeyError):
             return {"category": raw_text.strip(), "confidence": 0.5}
 
-    def _build_claude_request(self, image_b64: str, media_type: str) -> tuple[dict, dict]:
+    def _build_claude_request(
+        self, image_b64: str, media_type: str
+    ) -> tuple[dict, dict]:
         payload = {
             "model": self.model,
             "max_tokens": 1000,
@@ -128,7 +151,10 @@ class VisionClient:
         raw_text = str(data["content"][0]["text"])
         try:
             result = json.loads(raw_text)
-            return {"category": result.get("category", ""), "confidence": float(result.get("confidence", 0.5))}
+            return {
+                "category": result.get("category", ""),
+                "confidence": float(result.get("confidence", 0.5)),
+            }
         except (json.JSONDecodeError, KeyError, IndexError):
             return {"category": raw_text.strip(), "confidence": 0.5}
 

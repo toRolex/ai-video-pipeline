@@ -96,7 +96,4 @@ class Dispatcher:
         current = self.current_attempts.get(task_id)
         if current is None:
             return False
-        return (
-            current["attempt_id"] == attempt_id
-            and current["lease_id"] == lease_id
-        )
+        return current["attempt_id"] == attempt_id and current["lease_id"] == lease_id

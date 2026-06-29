@@ -136,7 +136,9 @@ def ensure_supported_runtime_selection(payload: dict) -> None:
         raise ValueError("tts=custom 暂不支持当前阶段运行时执行")
 
 
-def _section_overrides(selected: str, providers: dict, mappings: dict, provider_env_key: str) -> dict[str, str]:
+def _section_overrides(
+    selected: str, providers: dict, mappings: dict, provider_env_key: str
+) -> dict[str, str]:
     mapping = mappings.get(selected)
     if mapping is None:
         return {}

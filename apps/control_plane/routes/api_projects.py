@@ -30,12 +30,14 @@ def list_projects(request: Request):
             if prj_dir.is_dir():
                 meta = repo.load_project_meta(prj_dir.name)
                 jobs = repo.list_jobs(prj_dir.name)
-                projects.append({
-                    "id": prj_dir.name,
-                    "name": meta.get("name", prj_dir.name),
-                    "status": "idle",
-                    "job_count": len(jobs),
-                })
+                projects.append(
+                    {
+                        "id": prj_dir.name,
+                        "name": meta.get("name", prj_dir.name),
+                        "status": "idle",
+                        "job_count": len(jobs),
+                    }
+                )
     return projects
 
 
@@ -78,7 +80,9 @@ async def upload_asset(request: Request, project_id: str, file: UploadFile):
     if not file.filename:
         raise HTTPException(status_code=400, detail="filename required")
     repo = FileStoreRepository(request.app.state.root_dir)
-    assets_dir = repo.create_project(project_id, name=project_id) / "runtime" / "source_assets"
+    assets_dir = (
+        repo.create_project(project_id, name=project_id) / "runtime" / "source_assets"
+    )
     assets_dir.mkdir(parents=True, exist_ok=True)
     safe_name = _sanitize_filename(file.filename)
     dest = assets_dir / safe_name
@@ -182,7 +186,8 @@ def index_assets(request: Request, project_id: str):
     source_dir.mkdir(parents=True, exist_ok=True)
 
     videos = [
-        file_path for file_path in sorted(source_dir.iterdir())
+        file_path
+        for file_path in sorted(source_dir.iterdir())
         if file_path.suffix.lower() in {".mp4", ".mov", ".avi", ".mkv"}
     ]
 
@@ -196,7 +201,9 @@ def index_assets(request: Request, project_id: str):
         conn.close()
         indexed_sources = {row[0] for row in rows if row[0]}
 
-    new_videos = [video for video in videos if str(video.resolve()) not in indexed_sources]
+    new_videos = [
+        video for video in videos if str(video.resolve()) not in indexed_sources
+    ]
 
     if new_videos:
         repository = AssetRepository(db_path)
@@ -251,8 +258,14 @@ async def patch_asset_status(request: Request, project_id: str, asset_id: str):
         raise HTTPException(status_code=400, detail="invalid status")
 
     if asset_id == "batch":
-        if not isinstance(asset_ids, list) or not asset_ids or any(not isinstance(item, str) or not item for item in asset_ids):
-            raise HTTPException(status_code=400, detail="asset_ids must be a non-empty string array")
+        if (
+            not isinstance(asset_ids, list)
+            or not asset_ids
+            or any(not isinstance(item, str) or not item for item in asset_ids)
+        ):
+            raise HTTPException(
+                status_code=400, detail="asset_ids must be a non-empty string array"
+            )
         target_ids = asset_ids
     else:
         target_ids = [asset_id]

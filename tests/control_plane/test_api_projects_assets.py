@@ -6,7 +6,11 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from apps.control_plane.app import create_app
-from packages.pipeline_services.asset_library import AssetRecord, AssetRepository, Category
+from packages.pipeline_services.asset_library import (
+    AssetRecord,
+    AssetRepository,
+    Category,
+)
 
 
 def _make_client(tmp_path: Path) -> TestClient:
@@ -56,29 +60,45 @@ def test_post_index_skips_existing_source_video(tmp_path: Path, monkeypatch) -> 
 
     db_path = project_dir / "asset_index.db"
     repo = AssetRepository(db_path)
-    repo.insert(AssetRecord(
-        asset_id="asset_existing",
-        file_path=str((project_dir / "runtime" / "indexed_clips" / "x.mp4").resolve()),
-        category=Category.MACRO,
-        product="荔枝菌",
-        source_video=str((source_dir / "a.mp4").resolve()),
-    ))
+    repo.insert(
+        AssetRecord(
+            asset_id="asset_existing",
+            file_path=str(
+                (project_dir / "runtime" / "indexed_clips" / "x.mp4").resolve()
+            ),
+            category=Category.MACRO,
+            product="荔枝菌",
+            source_video=str((source_dir / "a.mp4").resolve()),
+        )
+    )
 
     captured: dict[str, list[str]] = {"videos": []}
 
     def _fake_ingest_one(self, video_path: Path, output_base: Path):
         captured["videos"].append(video_path.name)
         repo_local = self.repository
-        repo_local.insert(AssetRecord(
-            asset_id=f"asset_{video_path.stem}",
-            file_path=str((output_base / "荔枝菌" / "产品特写" / f"{video_path.stem}_001.mp4").resolve()),
-            category=Category.MACRO,
-            product="荔枝菌",
-            source_video=str(video_path.resolve()),
-        ))
+        repo_local.insert(
+            AssetRecord(
+                asset_id=f"asset_{video_path.stem}",
+                file_path=str(
+                    (
+                        output_base
+                        / "荔枝菌"
+                        / "产品特写"
+                        / f"{video_path.stem}_001.mp4"
+                    ).resolve()
+                ),
+                category=Category.MACRO,
+                product="荔枝菌",
+                source_video=str(video_path.resolve()),
+            )
+        )
         return []
 
-    monkeypatch.setattr("packages.pipeline_services.asset_library.indexer.AssetIndexer._ingest_one_video", _fake_ingest_one)
+    monkeypatch.setattr(
+        "packages.pipeline_services.asset_library.indexer.AssetIndexer._ingest_one_video",
+        _fake_ingest_one,
+    )
 
     resp = client.post(f"/api/projects/{project_id}/assets/index")
 
@@ -100,12 +120,14 @@ def test_patch_asset_status_supports_batch(tmp_path: Path) -> None:
     db_path = project_dir / "asset_index.db"
     repo = AssetRepository(db_path)
     for asset_id in ("asset_1", "asset_2"):
-        repo.insert(AssetRecord(
-            asset_id=asset_id,
-            file_path=str((project_dir / "runtime" / f"{asset_id}.mp4").resolve()),
-            category=Category.MACRO,
-            product="荔枝菌",
-        ))
+        repo.insert(
+            AssetRecord(
+                asset_id=asset_id,
+                file_path=str((project_dir / "runtime" / f"{asset_id}.mp4").resolve()),
+                category=Category.MACRO,
+                product="荔枝菌",
+            )
+        )
 
     resp = client.patch(
         f"/api/projects/{project_id}/assets/batch",
@@ -116,7 +138,9 @@ def test_patch_asset_status_supports_batch(tmp_path: Path) -> None:
     assert resp.json() == {"updated": 2}
 
     conn = sqlite3.connect(str(db_path))
-    rows = conn.execute("SELECT asset_id, status FROM assets ORDER BY asset_id").fetchall()
+    rows = conn.execute(
+        "SELECT asset_id, status FROM assets ORDER BY asset_id"
+    ).fetchall()
     conn.close()
     assert rows == [("asset_1", "disabled"), ("asset_2", "disabled")]
 
@@ -127,12 +151,14 @@ def test_patch_asset_status_updates_single_asset(tmp_path: Path) -> None:
     project_dir = _create_project_dir(tmp_path, project_id)
     db_path = project_dir / "asset_index.db"
     repo = AssetRepository(db_path)
-    repo.insert(AssetRecord(
-        asset_id="asset_1",
-        file_path=str((project_dir / "runtime" / "asset_1.mp4").resolve()),
-        category=Category.MACRO,
-        product="荔枝菌",
-    ))
+    repo.insert(
+        AssetRecord(
+            asset_id="asset_1",
+            file_path=str((project_dir / "runtime" / "asset_1.mp4").resolve()),
+            category=Category.MACRO,
+            product="荔枝菌",
+        )
+    )
 
     resp = client.patch(
         f"/api/projects/{project_id}/assets/asset_1",

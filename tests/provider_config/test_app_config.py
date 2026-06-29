@@ -166,6 +166,7 @@ def test_get_video_config_deep_merge_preserves_defaults() -> None:
 
 # --- Vision tests ---
 
+
 def test_get_vision_config_default() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         manager = AppConfigManager(config_dir=tmpdir)
@@ -182,10 +183,15 @@ def test_get_vision_api_key_from_env(monkeypatch) -> None:
 
 
 def test_get_vision_endpoint_from_env(monkeypatch) -> None:
-    monkeypatch.setenv("XIAOMI_VISION_API_URL", "https://api.example.com/v1/chat/completions")
+    monkeypatch.setenv(
+        "XIAOMI_VISION_API_URL", "https://api.example.com/v1/chat/completions"
+    )
     with tempfile.TemporaryDirectory() as tmpdir:
         manager = AppConfigManager(config_dir=tmpdir)
-        assert manager.get_vision_endpoint() == "https://api.example.com/v1/chat/completions"
+        assert (
+            manager.get_vision_endpoint()
+            == "https://api.example.com/v1/chat/completions"
+        )
 
 
 def test_get_vision_model_from_env(monkeypatch) -> None:
@@ -213,6 +219,7 @@ def test_vision_api_key_empty_when_not_set(monkeypatch) -> None:
 
 
 # --- LLM api_key/endpoint tests ---
+
 
 def test_get_llm_api_key_from_env(monkeypatch) -> None:
     monkeypatch.setenv("DEEPSEEK_API_KEY", "sk-test-deepseek")

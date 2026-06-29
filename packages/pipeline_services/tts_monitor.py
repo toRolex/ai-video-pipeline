@@ -92,7 +92,7 @@ class TTSMonitor:
         elif status == "success":
             filtered = [entry for entry in filtered if entry.success]
 
-        return filtered[offset:offset + limit]
+        return filtered[offset : offset + limit]
 
     def get_metrics(
         self,
@@ -110,7 +110,9 @@ class TTSMonitor:
         latencies = [entry.latency_ms for entry in logs]
         avg_latency = sum(latencies) // len(latencies) if latencies else 0
 
-        durations = [entry.audio_duration_ms for entry in logs if entry.audio_duration_ms]
+        durations = [
+            entry.audio_duration_ms for entry in logs if entry.audio_duration_ms
+        ]
         avg_duration = sum(durations) // len(durations) if durations else 0
         total_duration = sum(durations)
 

@@ -23,7 +23,7 @@ class TestTTSRequestLog:
             error_type=None,
             error_message=None,
             attempt_count=1,
-            final_voice_id="Mia"
+            final_voice_id="Mia",
         )
         assert log.id == "req_001"
         assert log.success is True
@@ -45,7 +45,7 @@ class TestTTSRequestLog:
             error_type=None,
             error_message=None,
             attempt_count=1,
-            final_voice_id="Mia"
+            final_voice_id="Mia",
         )
         data = log.to_dict()
         assert isinstance(data, dict)
@@ -63,10 +63,7 @@ class TestTTSMetrics:
 
     def test_calculate_success_rate(self):
         metrics = TTSMetrics(
-            time_range="24h",
-            total_requests=100,
-            success_count=95,
-            failure_count=5
+            time_range="24h", total_requests=100, success_count=95, failure_count=5
         )
         assert metrics.success_rate == 0.95
 
@@ -89,7 +86,7 @@ class TestTTSMonitor:
             error_type=None,
             error_message=None,
             attempt_count=1,
-            final_voice_id="Mia"
+            final_voice_id="Mia",
         )
         monitor.record_request(log)
         assert len(monitor.get_logs()) == 1
@@ -113,7 +110,7 @@ class TestTTSMonitor:
                 error_type="rate_limit" if i >= 8 else None,
                 error_message="429" if i >= 8 else None,
                 attempt_count=1,
-                final_voice_id="Mia"
+                final_voice_id="Mia",
             )
             monitor.record_request(log)
 
@@ -127,20 +124,38 @@ class TestTTSMonitor:
         monitor = TTSMonitor(log_dir=str(tmp_path))
 
         success_log = TTSRequestLog(
-            id="req_001", task_id="t1", project_id="p1",
-            timestamp=datetime.now(), model="mimo-v2.5-tts",
-            voice_id="Mia", style_prompt="自然", text_length=100,
-            success=True, audio_duration_ms=3200, latency_ms=1800,
-            error_type=None, error_message=None,
-            attempt_count=1, final_voice_id="Mia"
+            id="req_001",
+            task_id="t1",
+            project_id="p1",
+            timestamp=datetime.now(),
+            model="mimo-v2.5-tts",
+            voice_id="Mia",
+            style_prompt="自然",
+            text_length=100,
+            success=True,
+            audio_duration_ms=3200,
+            latency_ms=1800,
+            error_type=None,
+            error_message=None,
+            attempt_count=1,
+            final_voice_id="Mia",
         )
         fail_log = TTSRequestLog(
-            id="req_002", task_id="t2", project_id="p1",
-            timestamp=datetime.now(), model="mimo-v2.5-tts",
-            voice_id="Mia", style_prompt="自然", text_length=100,
-            success=False, audio_duration_ms=None, latency_ms=5000,
-            error_type="timeout", error_message="request timeout",
-            attempt_count=3, final_voice_id="Mia"
+            id="req_002",
+            task_id="t2",
+            project_id="p1",
+            timestamp=datetime.now(),
+            model="mimo-v2.5-tts",
+            voice_id="Mia",
+            style_prompt="自然",
+            text_length=100,
+            success=False,
+            audio_duration_ms=None,
+            latency_ms=5000,
+            error_type="timeout",
+            error_message="request timeout",
+            attempt_count=3,
+            final_voice_id="Mia",
         )
 
         monitor.record_request(success_log)

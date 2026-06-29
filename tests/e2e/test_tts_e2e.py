@@ -18,8 +18,7 @@ class TestTTSEndToEnd:
 
     def _take_snapshot(self):
         result = subprocess.run(
-            ["playwright-cli", "snapshot"],
-            capture_output=True, text=True
+            ["playwright-cli", "snapshot"], capture_output=True, text=True
         )
         return result.stdout
 

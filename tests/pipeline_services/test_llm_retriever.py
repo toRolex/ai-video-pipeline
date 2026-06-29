@@ -40,13 +40,15 @@ def repo_with_assets(tmp_path):
         ("m1", Category.MACRO, "/data/macro/a.mp4"),
     ]
     for aid, cat, path in assets:
-        r.insert(AssetRecord(
-            asset_id=aid,
-            file_path=path,
-            category=cat,
-            product="荔枝菌",
-            confidence=0.85,
-        ))
+        r.insert(
+            AssetRecord(
+                asset_id=aid,
+                file_path=path,
+                category=cat,
+                product="荔枝菌",
+                confidence=0.85,
+            )
+        )
     return r
 
 

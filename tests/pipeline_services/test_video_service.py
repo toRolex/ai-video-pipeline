@@ -14,11 +14,21 @@ class TestVideoService:
     def _make_service(self):
         return VideoService(dry_run=False)
 
-    @patch("packages.pipeline_services.video_service.get_ffmpeg_path", return_value="ffmpeg")
-    @patch("packages.pipeline_services.video_service.get_media_duration", return_value=10.0)
-    @patch("packages.pipeline_services.video_service.get_video_size", return_value=(1080, 1920))
+    @patch(
+        "packages.pipeline_services.video_service.get_ffmpeg_path",
+        return_value="ffmpeg",
+    )
+    @patch(
+        "packages.pipeline_services.video_service.get_media_duration", return_value=10.0
+    )
+    @patch(
+        "packages.pipeline_services.video_service.get_video_size",
+        return_value=(1080, 1920),
+    )
     @patch("packages.pipeline_services.video_service.subprocess.run")
-    def test_build_base_video_calls_ffmpeg(self, mock_run, mock_size, mock_duration, mock_ffmpeg, tmp_path):
+    def test_build_base_video_calls_ffmpeg(
+        self, mock_run, mock_size, mock_duration, mock_ffmpeg, tmp_path
+    ):
         mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
 
         clip_dir = tmp_path / "clips"
@@ -30,7 +40,12 @@ class TestVideoService:
             "asset_bundle": {
                 "audio_path": str(tmp_path / "audio.mp3"),
                 "selected_clips": [
-                    {"file_path": str(clip_dir / "clip1.mp4"), "start": 0.0, "end": 3.0, "duration_seconds": 5.0}
+                    {
+                        "file_path": str(clip_dir / "clip1.mp4"),
+                        "start": 0.0,
+                        "end": 3.0,
+                        "duration_seconds": 5.0,
+                    }
                 ],
             },
         }
@@ -44,7 +59,13 @@ class TestVideoService:
 
     def test_dry_run_writes_stub(self, tmp_path):
         svc = VideoService(dry_run=True)
-        job = {"job_id": "test-002", "asset_bundle": {"audio_path": str(tmp_path / "audio.mp3"), "selected_clips": []}}
+        job = {
+            "job_id": "test-002",
+            "asset_bundle": {
+                "audio_path": str(tmp_path / "audio.mp3"),
+                "selected_clips": [],
+            },
+        }
         output = tmp_path / "base.mp4"
         (tmp_path / "audio.mp3").write_bytes(b"fake")
         svc.build_base_video(tmp_path, job, output)
@@ -54,7 +75,10 @@ class TestVideoService:
         svc = self._make_service()
         job = {
             "job_id": "test-003",
-            "asset_bundle": {"audio_path": str(tmp_path / "missing.mp3"), "selected_clips": []},
+            "asset_bundle": {
+                "audio_path": str(tmp_path / "missing.mp3"),
+                "selected_clips": [],
+            },
         }
         output = tmp_path / "base.mp4"
         with pytest.raises(FileNotFoundError):
@@ -74,10 +98,18 @@ class TestVideoService:
         svc.burn_final_video(base, audio, srt, final)
         assert final.exists()
 
-    @patch("packages.pipeline_services.video_service.get_ffmpeg_path", return_value="ffmpeg")
-    @patch("packages.pipeline_services.video_service.get_video_size", return_value=(1080, 1920))
+    @patch(
+        "packages.pipeline_services.video_service.get_ffmpeg_path",
+        return_value="ffmpeg",
+    )
+    @patch(
+        "packages.pipeline_services.video_service.get_video_size",
+        return_value=(1080, 1920),
+    )
     @patch("packages.pipeline_services.video_service.subprocess.run")
-    def test_burn_final_video_with_cover(self, mock_run, mock_size, mock_ffmpeg, tmp_path):
+    def test_burn_final_video_with_cover(
+        self, mock_run, mock_size, mock_ffmpeg, tmp_path
+    ):
         mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
 
         base = tmp_path / "base.mp4"
@@ -99,7 +131,10 @@ class TestVideoService:
         call_args = mock_run.call_args[0][0]
         assert "-filter_complex" in call_args
 
-    @patch("packages.pipeline_services.video_service.get_ffmpeg_path", return_value="ffmpeg")
+    @patch(
+        "packages.pipeline_services.video_service.get_ffmpeg_path",
+        return_value="ffmpeg",
+    )
     @patch("packages.pipeline_services.video_service.subprocess.run")
     def test_burn_final_video_without_cover(self, mock_run, mock_ffmpeg, tmp_path):
         mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
@@ -121,7 +156,10 @@ class TestVideoService:
         assert "-filter_complex" in call_args
         assert "subtitles" in " ".join(call_args)
 
-    @patch("packages.pipeline_services.video_service.get_ffmpeg_path", return_value="ffmpeg")
+    @patch(
+        "packages.pipeline_services.video_service.get_ffmpeg_path",
+        return_value="ffmpeg",
+    )
     @patch("packages.pipeline_services.video_service.subprocess.run")
     def test_burn_final_video_no_subtitles(self, mock_run, mock_ffmpeg, tmp_path):
         mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
@@ -194,9 +232,17 @@ class TestVideoServiceCoverTitle:
     def _make_service(self):
         return VideoService(dry_run=False)
 
-    @patch("packages.pipeline_services.video_service.get_ffmpeg_path", return_value="ffmpeg")
-    @patch("packages.pipeline_services.video_service.get_media_duration", return_value=10.0)
-    @patch("packages.pipeline_services.video_service.get_video_size", return_value=(1080, 1920))
+    @patch(
+        "packages.pipeline_services.video_service.get_ffmpeg_path",
+        return_value="ffmpeg",
+    )
+    @patch(
+        "packages.pipeline_services.video_service.get_media_duration", return_value=10.0
+    )
+    @patch(
+        "packages.pipeline_services.video_service.get_video_size",
+        return_value=(1080, 1920),
+    )
     @patch("packages.pipeline_services.video_service.subprocess.run")
     def test_burn_with_cover_title_short_video_skips(
         self, mock_run, mock_size, mock_duration, mock_ffmpeg, tmp_path
@@ -229,9 +275,17 @@ class TestVideoServiceCoverTitle:
         joined = " ".join(call_args)
         assert "subtitles" not in joined
 
-    @patch("packages.pipeline_services.video_service.get_ffmpeg_path", return_value="ffmpeg")
-    @patch("packages.pipeline_services.video_service.get_media_duration", return_value=10.0)
-    @patch("packages.pipeline_services.video_service.get_video_size", return_value=(1080, 1920))
+    @patch(
+        "packages.pipeline_services.video_service.get_ffmpeg_path",
+        return_value="ffmpeg",
+    )
+    @patch(
+        "packages.pipeline_services.video_service.get_media_duration", return_value=10.0
+    )
+    @patch(
+        "packages.pipeline_services.video_service.get_video_size",
+        return_value=(1080, 1920),
+    )
     @patch("packages.pipeline_services.video_service.subprocess.run")
     def test_burn_with_cover_title_generates_ass_and_subtitles_filter(
         self, mock_run, mock_size, mock_duration, mock_ffmpeg, tmp_path
@@ -270,9 +324,17 @@ class TestVideoServiceCoverTitle:
         joined = " ".join(call_args)
         assert "overlay" in joined
 
-    @patch("packages.pipeline_services.video_service.get_ffmpeg_path", return_value="ffmpeg")
-    @patch("packages.pipeline_services.video_service.get_media_duration", return_value=10.0)
-    @patch("packages.pipeline_services.video_service.get_video_size", return_value=(1080, 1920))
+    @patch(
+        "packages.pipeline_services.video_service.get_ffmpeg_path",
+        return_value="ffmpeg",
+    )
+    @patch(
+        "packages.pipeline_services.video_service.get_media_duration", return_value=10.0
+    )
+    @patch(
+        "packages.pipeline_services.video_service.get_video_size",
+        return_value=(1080, 1920),
+    )
     @patch("packages.pipeline_services.video_service.subprocess.run")
     def test_burn_with_cover_title_empty_text_skips(
         self, mock_run, mock_size, mock_duration, mock_ffmpeg, tmp_path
@@ -287,7 +349,13 @@ class TestVideoServiceCoverTitle:
         audio.write_bytes(b"fake")
 
         svc = self._make_service()
-        svc.burn_final_video(base, audio, None, final, cover_title={"text": "", "highlight_words": [], "style": {}})
+        svc.burn_final_video(
+            base,
+            audio,
+            None,
+            final,
+            cover_title={"text": "", "highlight_words": [], "style": {}},
+        )
 
         ass_path = tmp_path / "cover_title.ass"
         assert not ass_path.exists()
@@ -303,8 +371,13 @@ class TestVideoServiceMusicMix:
     def _make_service(self):
         return VideoService(dry_run=False)
 
-    @patch("packages.pipeline_services.video_service.get_ffmpeg_path", return_value="ffmpeg")
-    @patch("packages.pipeline_services.video_service.get_media_duration", return_value=10.0)
+    @patch(
+        "packages.pipeline_services.video_service.get_ffmpeg_path",
+        return_value="ffmpeg",
+    )
+    @patch(
+        "packages.pipeline_services.video_service.get_media_duration", return_value=10.0
+    )
     @patch("packages.pipeline_services.video_service.subprocess.run")
     def test_burn_with_music_includes_amix_afade_and_stream_loop(
         self, mock_run, mock_duration, mock_ffmpeg, tmp_path
@@ -321,7 +394,9 @@ class TestVideoServiceMusicMix:
         music.write_bytes(b"fake")
 
         svc = self._make_service()
-        svc.burn_final_video(base, audio, None, final, music_path=music, music_volume=80)
+        svc.burn_final_video(
+            base, audio, None, final, music_path=music, music_volume=80
+        )
 
         call_args = mock_run.call_args[0][0]
         joined = " ".join(call_args)
@@ -330,8 +405,13 @@ class TestVideoServiceMusicMix:
         assert "amix" in joined
         assert "afade=t=out" in joined
 
-    @patch("packages.pipeline_services.video_service.get_ffmpeg_path", return_value="ffmpeg")
-    @patch("packages.pipeline_services.video_service.get_media_duration", return_value=10.0)
+    @patch(
+        "packages.pipeline_services.video_service.get_ffmpeg_path",
+        return_value="ffmpeg",
+    )
+    @patch(
+        "packages.pipeline_services.video_service.get_media_duration", return_value=10.0
+    )
     @patch("packages.pipeline_services.video_service.subprocess.run")
     def test_burn_with_music_volume_scaled(
         self, mock_run, mock_duration, mock_ffmpeg, tmp_path
@@ -348,7 +428,9 @@ class TestVideoServiceMusicMix:
         music.write_bytes(b"fake")
 
         svc = self._make_service()
-        svc.burn_final_video(base, audio, None, final, music_path=music, music_volume=50)
+        svc.burn_final_video(
+            base, audio, None, final, music_path=music, music_volume=50
+        )
 
         call_args = mock_run.call_args[0][0]
         joined = " ".join(call_args)
@@ -356,8 +438,13 @@ class TestVideoServiceMusicMix:
         # music volume factor should be 0.50
         assert "volume=0.50" in joined or "volume=0.5" in joined
 
-    @patch("packages.pipeline_services.video_service.get_ffmpeg_path", return_value="ffmpeg")
-    @patch("packages.pipeline_services.video_service.get_media_duration", return_value=10.0)
+    @patch(
+        "packages.pipeline_services.video_service.get_ffmpeg_path",
+        return_value="ffmpeg",
+    )
+    @patch(
+        "packages.pipeline_services.video_service.get_media_duration", return_value=10.0
+    )
     @patch("packages.pipeline_services.video_service.subprocess.run")
     def test_burn_with_music_default_fade_duration(
         self, mock_run, mock_duration, mock_ffmpeg, tmp_path
@@ -381,11 +468,12 @@ class TestVideoServiceMusicMix:
         # fade starts at voice_duration - 1.5 = 8.5, with d=1.5
         assert "afade=t=out:st=8.500:d=1.5" in joined
 
-    @patch("packages.pipeline_services.video_service.get_ffmpeg_path", return_value="ffmpeg")
+    @patch(
+        "packages.pipeline_services.video_service.get_ffmpeg_path",
+        return_value="ffmpeg",
+    )
     @patch("packages.pipeline_services.video_service.subprocess.run")
-    def test_burn_without_music_no_amix(
-        self, mock_run, mock_ffmpeg, tmp_path
-    ):
+    def test_burn_without_music_no_amix(self, mock_run, mock_ffmpeg, tmp_path):
         """No music_path means no amix/afade/stream_loop in the command."""
         mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
 

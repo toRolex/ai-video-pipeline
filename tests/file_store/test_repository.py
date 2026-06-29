@@ -91,26 +91,52 @@ def test_append_review_event(tmp_path: Path) -> None:
     repo.append_review_event("project-001", {"job_id": "job-1", "action": "reject"})
 
     lines = (
-        tmp_path
-        / "workspace"
-        / "projects"
-        / "project-001"
-        / "reviews"
-        / "review_events.jsonl"
-    ).read_text(encoding="utf-8").splitlines()
+        (
+            tmp_path
+            / "workspace"
+            / "projects"
+            / "project-001"
+            / "reviews"
+            / "review_events.jsonl"
+        )
+        .read_text(encoding="utf-8")
+        .splitlines()
+    )
     assert [json.loads(line)["action"] for line in lines] == ["approve", "reject"]
 
 
 def test_delete_job_removes_json_file_and_runtime_dir(tmp_path: Path) -> None:
     repo = FileStoreRepository(tmp_path)
     repo.create_project("prj_001")
-    record = JobRecord(job_id="job_test_001", project_id="prj_001", product="test", phase="queued", review_status="none")
+    record = JobRecord(
+        job_id="job_test_001",
+        project_id="prj_001",
+        product="test",
+        phase="queued",
+        review_status="none",
+    )
     repo.save_job("prj_001", record)
-    json_path = tmp_path / "workspace" / "projects" / "prj_001" / "control" / "jobs" / "job_test_001.json"
+    json_path = (
+        tmp_path
+        / "workspace"
+        / "projects"
+        / "prj_001"
+        / "control"
+        / "jobs"
+        / "job_test_001.json"
+    )
     assert json_path.exists()
 
     # Create a runtime artifacts directory with some files
-    runtime_dir = tmp_path / "workspace" / "projects" / "prj_001" / "runtime" / "jobs" / "job_test_001"
+    runtime_dir = (
+        tmp_path
+        / "workspace"
+        / "projects"
+        / "prj_001"
+        / "runtime"
+        / "jobs"
+        / "job_test_001"
+    )
     runtime_dir.mkdir(parents=True)
     (runtime_dir / "script.txt").write_text("test script")
     (runtime_dir / "tts_audio.mp3").write_bytes(b"fake audio")
@@ -144,16 +170,29 @@ def test_list_jobs_empty_project_returns_empty_list(tmp_path: Path) -> None:
 def test_list_jobs_returns_sorted_by_mtime_with_display_index(tmp_path: Path) -> None:
     """按 mtime 升序返回，并分配 001/002 三位数 display_index。"""
     import time
+
     repo = FileStoreRepository(tmp_path)
     repo.create_project("project-001")
 
     # 先创建 job_b，再创建 job_a，让 job_a 的 mtime 更大
-    record_b = JobRecord(job_id="job_b", phase="queued", review_status="none",
-                         name="Beta", skip_subtitle=True, auto_approve=False)
+    record_b = JobRecord(
+        job_id="job_b",
+        phase="queued",
+        review_status="none",
+        name="Beta",
+        skip_subtitle=True,
+        auto_approve=False,
+    )
     repo.save_job("project-001", record_b)
     time.sleep(0.05)  # 确保 mtime 有差异
-    record_a = JobRecord(job_id="job_a", phase="queued", review_status="none",
-                         name="Alpha", skip_subtitle=False, auto_approve=True)
+    record_a = JobRecord(
+        job_id="job_a",
+        phase="queued",
+        review_status="none",
+        name="Alpha",
+        skip_subtitle=False,
+        auto_approve=True,
+    )
     repo.save_job("project-001", record_a)
 
     result = repo.list_jobs("project-001")
@@ -178,8 +217,14 @@ def test_list_jobs_name_skip_subtitle_auto_approve_from_record(tmp_path: Path) -
     repo = FileStoreRepository(tmp_path)
     repo.create_project("project-001")
 
-    record = JobRecord(job_id="job-1", phase="queued", review_status="none",
-                       name="测试项目", skip_subtitle=True, auto_approve=True)
+    record = JobRecord(
+        job_id="job-1",
+        phase="queued",
+        review_status="none",
+        name="测试项目",
+        skip_subtitle=True,
+        auto_approve=True,
+    )
     repo.save_job("project-001", record)
 
     result = repo.list_jobs("project-001")
@@ -194,6 +239,7 @@ def test_list_jobs_name_skip_subtitle_auto_approve_from_record(tmp_path: Path) -
 def test_list_jobs_bad_json_still_gets_display_index(tmp_path: Path) -> None:
     """解析失败的兜底记录也带 display_index。"""
     import time
+
     repo = FileStoreRepository(tmp_path)
     repo.create_project("project-001")
 

@@ -27,12 +27,14 @@ class MusicLibrary:
                 continue
             duration = self._probe_duration(f)
             rel = f.relative_to(self._root_dir).as_posix()
-            tracks.append({
-                "filename": f.name,
-                "relative_path": rel,
-                "duration_seconds": duration,
-                "size_bytes": f.stat().st_size,
-            })
+            tracks.append(
+                {
+                    "filename": f.name,
+                    "relative_path": rel,
+                    "duration_seconds": duration,
+                    "size_bytes": f.stat().st_size,
+                }
+            )
         self._tracks = tracks
 
     @staticmethod
@@ -40,12 +42,18 @@ class MusicLibrary:
         try:
             result = subprocess.run(
                 [
-                    "ffprobe", "-v", "quiet",
-                    "-show_entries", "format=duration",
-                    "-of", "default=noprint_wrappers=1:nokey=1",
+                    "ffprobe",
+                    "-v",
+                    "quiet",
+                    "-show_entries",
+                    "format=duration",
+                    "-of",
+                    "default=noprint_wrappers=1:nokey=1",
                     str(path),
                 ],
-                capture_output=True, text=True, timeout=15,
+                capture_output=True,
+                text=True,
+                timeout=15,
             )
             if result.returncode == 0 and result.stdout.strip():
                 return float(result.stdout.strip())

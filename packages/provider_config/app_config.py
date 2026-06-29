@@ -181,6 +181,7 @@ class AppConfigManager:
 
     def get_api_key(self, provider: str) -> str:
         import os
+
         # 优先读取 provider 专用 key，回退到通用 TTS_API_KEY 或 LLM_API_KEY
         env_key = self.API_KEY_ENV_MAP.get(provider, "")
         value = os.getenv(env_key, "").strip().strip('"').strip("'")
@@ -194,6 +195,7 @@ class AppConfigManager:
 
     def get_api_base_url(self, provider: str) -> str:
         import os
+
         # 优先读取 provider 专用 endpoint，回退到通用 TTS_API_URL 或 LLM_API_URL
         env_key = self.API_BASE_URL_ENV_MAP.get(provider, "")
         value = os.getenv(env_key, "").strip().rstrip("/")
@@ -206,6 +208,7 @@ class AppConfigManager:
 
     def get_llm_api_key(self) -> str:
         import os
+
         provider = self.get_llm_config().get("provider", "deepseek")
         # 优先读取 provider 专用 key，回退到通用 LLM_API_KEY
         env_key = self.API_KEY_ENV_MAP.get(provider, "")
@@ -216,6 +219,7 @@ class AppConfigManager:
 
     def get_llm_endpoint(self) -> str:
         import os
+
         provider = self.get_llm_config().get("provider", "deepseek")
         # 优先读取 provider 专用 endpoint，回退到通用 LLM_API_URL
         env_key = self.API_BASE_URL_ENV_MAP.get(provider, "")
@@ -239,6 +243,7 @@ class AppConfigManager:
 
     def get_vision_api_key(self) -> str:
         import os
+
         provider = self.get_vision_config().get("provider", "xiaomi")
         # 优先读取 provider 专用 key，回退到通用 VISION_API_KEY
         env_key = self.VISION_API_KEY_ENV_MAP.get(provider, "VISION_API_KEY")
@@ -249,6 +254,7 @@ class AppConfigManager:
 
     def get_vision_endpoint(self) -> str:
         import os
+
         provider = self.get_vision_config().get("provider", "xiaomi")
         # 优先读取 provider 专用 endpoint，回退到通用 VISION_API_URL
         env_key = self.VISION_ENDPOINT_ENV_MAP.get(provider, "VISION_API_URL")
@@ -259,6 +265,7 @@ class AppConfigManager:
 
     def get_vision_model(self) -> str:
         import os
+
         provider = self.get_vision_config().get("provider", "xiaomi")
         # 优先读取 provider 专用 model，回退到通用 VISION_MODEL
         env_key = self.VISION_MODEL_ENV_MAP.get(provider, "VISION_MODEL")

@@ -40,7 +40,9 @@ class TestSubtitleService:
         audio_path.write_bytes(b"fake")
         srt_path = tmp_path / "test.srt"
 
-        svc.build_srt(audio_path, srt_path, "第一句内容。第二句内容。第三句内容。第四句内容。")
+        svc.build_srt(
+            audio_path, srt_path, "第一句内容。第二句内容。第三句内容。第四句内容。"
+        )
 
         assert srt_path.exists()
         content = srt_path.read_text(encoding="utf-8")

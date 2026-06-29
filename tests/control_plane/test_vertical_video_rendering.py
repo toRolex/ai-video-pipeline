@@ -6,7 +6,10 @@ from typing import Any
 import pytest
 
 from apps.control_plane.app import _auto_tick
-from packages.pipeline_services.phase_orchestrator import PhaseContext, PhaseOrchestrator
+from packages.pipeline_services.phase_orchestrator import (
+    PhaseContext,
+    PhaseOrchestrator,
+)
 
 
 def _make_orchestrator(root_dir: Path, video_svc, schedule_store) -> PhaseOrchestrator:
@@ -29,7 +32,9 @@ def _make_orchestrator(root_dir: Path, video_svc, schedule_store) -> PhaseOrches
     return orch
 
 
-def test_video_rendering_uses_media_bridge_with_selected_clips(monkeypatch, tmp_path: Path) -> None:
+def test_video_rendering_uses_media_bridge_with_selected_clips(
+    monkeypatch, tmp_path: Path
+) -> None:
     root_dir = tmp_path
     workspace_dir = root_dir / "workspace"
     project_dir = workspace_dir / "projects" / "project-001"
@@ -58,7 +63,9 @@ def test_video_rendering_uses_media_bridge_with_selected_clips(monkeypatch, tmp_
         def __init__(self, dry_run: bool = False) -> None:
             pass
 
-        def build_base_video(self, actual_project_dir: Path, payload: dict, output_path: Path) -> None:
+        def build_base_video(
+            self, actual_project_dir: Path, payload: dict, output_path: Path
+        ) -> None:
             captured["project_dir"] = actual_project_dir
             captured["payload"] = payload
             captured["output_path"] = output_path
@@ -68,7 +75,9 @@ def test_video_rendering_uses_media_bridge_with_selected_clips(monkeypatch, tmp_
         def __init__(self, _root_dir: Path) -> None:
             pass
 
-        def add(self, job_id: str, platform: str, title: str = "", description: str = "") -> int:
+        def add(
+            self, job_id: str, platform: str, title: str = "", description: str = ""
+        ) -> int:
             return 1
 
     monkeypatch.setattr("packages.provider_config.app_config.load_dotenv", None)
@@ -87,7 +96,9 @@ def test_video_rendering_uses_media_bridge_with_selected_clips(monkeypatch, tmp_
 
     assert captured["project_dir"] == project_dir
     assert captured["output_path"] == job_dir / "base.mp4"
-    assert captured["payload"]["asset_bundle"]["audio_path"] == str(job_dir / "audio.mp3")
+    assert captured["payload"]["asset_bundle"]["audio_path"] == str(
+        job_dir / "audio.mp3"
+    )
     assert captured["payload"]["asset_bundle"]["selected_clips"] == [
         {"file_path": str(clip_a)},
         {"file_path": str(clip_b)},
@@ -95,7 +106,9 @@ def test_video_rendering_uses_media_bridge_with_selected_clips(monkeypatch, tmp_
     assert artifacts[0].kind == "video_base"
 
 
-def test_final_review_allows_missing_srt_when_skip_subtitle_is_enabled(monkeypatch, tmp_path: Path) -> None:
+def test_final_review_allows_missing_srt_when_skip_subtitle_is_enabled(
+    monkeypatch, tmp_path: Path
+) -> None:
     root_dir = tmp_path
     workspace_dir = root_dir / "workspace"
     project_dir = workspace_dir / "projects" / "project-001"
@@ -142,7 +155,9 @@ def test_final_review_allows_missing_srt_when_skip_subtitle_is_enabled(monkeypat
         def __init__(self, _root_dir: Path) -> None:
             self.calls: list[tuple] = []
 
-        def add(self, job_id: str, platform: str, title: str = "", description: str = "") -> int:
+        def add(
+            self, job_id: str, platform: str, title: str = "", description: str = ""
+        ) -> int:
             self.calls.append((job_id, platform, title, description))
             return 1
 
@@ -164,9 +179,19 @@ def test_final_review_allows_missing_srt_when_skip_subtitle_is_enabled(monkeypat
     assert artifacts[0].kind == "final_video"
 
 
-def test_auto_tick_skips_subtitle_phase_when_skip_subtitle_is_enabled(monkeypatch, tmp_path: Path) -> None:
+def test_auto_tick_skips_subtitle_phase_when_skip_subtitle_is_enabled(
+    monkeypatch, tmp_path: Path
+) -> None:
     root_dir = tmp_path
-    job_path = root_dir / "workspace" / "projects" / "project-001" / "control" / "jobs" / "job-001.json"
+    job_path = (
+        root_dir
+        / "workspace"
+        / "projects"
+        / "project-001"
+        / "control"
+        / "jobs"
+        / "job-001.json"
+    )
     job_path.parent.mkdir(parents=True, exist_ok=True)
     job_path.write_text(
         json.dumps(
@@ -178,7 +203,8 @@ def test_auto_tick_skips_subtitle_phase_when_skip_subtitle_is_enabled(monkeypatc
             },
             ensure_ascii=False,
             indent=2,
-        ) + "\n",
+        )
+        + "\n",
         encoding="utf-8",
     )
 
@@ -202,7 +228,15 @@ def test_auto_tick_skips_subtitle_phase_when_skip_subtitle_is_enabled(monkeypatc
 
 def test_auto_tick_auto_approves_review_gates(monkeypatch, tmp_path: Path) -> None:
     root_dir = tmp_path
-    job_path = root_dir / "workspace" / "projects" / "project-001" / "control" / "jobs" / "job-001.json"
+    job_path = (
+        root_dir
+        / "workspace"
+        / "projects"
+        / "project-001"
+        / "control"
+        / "jobs"
+        / "job-001.json"
+    )
     job_path.parent.mkdir(parents=True, exist_ok=True)
     job_path.write_text(
         json.dumps(
@@ -214,7 +248,8 @@ def test_auto_tick_auto_approves_review_gates(monkeypatch, tmp_path: Path) -> No
             },
             ensure_ascii=False,
             indent=2,
-        ) + "\n",
+        )
+        + "\n",
         encoding="utf-8",
     )
 

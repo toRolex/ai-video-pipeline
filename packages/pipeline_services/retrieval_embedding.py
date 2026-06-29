@@ -20,9 +20,7 @@ def cosine_similarity(a: list[float], b: list[float]) -> float:
     magnitude.
     """
     if len(a) != len(b):
-        raise ValueError(
-            f"Vector dimension mismatch: {len(a)} vs {len(b)}"
-        )
+        raise ValueError(f"Vector dimension mismatch: {len(a)} vs {len(b)}")
     if not a or not b:
         raise ValueError("Empty vectors are not allowed")
 

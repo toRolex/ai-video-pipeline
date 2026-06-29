@@ -34,10 +34,17 @@ def export_schedule(request: Request):
     ws.title = "排期池"
     ws.append(["ID", "Job ID", "平台", "标题", "简介", "状态", "创建时间"])
     for e in entries:
-        ws.append([
-            e["id"], e["job_id"], e["platform"],
-            e["title"], e["description"], e["status"], e["created_at"]
-        ])
+        ws.append(
+            [
+                e["id"],
+                e["job_id"],
+                e["platform"],
+                e["title"],
+                e["description"],
+                e["status"],
+                e["created_at"],
+            ]
+        )
     buf = BytesIO()
     wb.save(buf)
     buf.seek(0)

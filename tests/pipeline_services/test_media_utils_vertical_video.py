@@ -26,7 +26,9 @@ def _ffprobe() -> str:
     return shutil.which("ffprobe") or os.environ.get("FFPROBE_PATH", "ffprobe")
 
 
-def _make_color_video(output_path: Path, size: str, duration: float = 1.0, color: str = "red") -> Path:
+def _make_color_video(
+    output_path: Path, size: str, duration: float = 1.0, color: str = "red"
+) -> Path:
     subprocess.run(
         [
             _ffmpeg(),
@@ -120,7 +122,9 @@ def test_normalize_clip_to_vertical_outputs_1080x1920(tmp_path: Path) -> None:
 
 @pytest.mark.slow
 def test_normalize_clip_to_vertical_uses_non_black_background(tmp_path: Path) -> None:
-    source = _make_color_video(tmp_path / "landscape.mp4", "1280x720", duration=1.5, color="red")
+    source = _make_color_video(
+        tmp_path / "landscape.mp4", "1280x720", duration=1.5, color="red"
+    )
     output = tmp_path / "normalized.mp4"
     frame = tmp_path / "frame.png"
 
@@ -133,15 +137,25 @@ def test_normalize_clip_to_vertical_uses_non_black_background(tmp_path: Path) ->
 
 
 @pytest.mark.slow
-def test_assemble_vertical_base_video_handles_mixed_orientations(tmp_path: Path) -> None:
+def test_assemble_vertical_base_video_handles_mixed_orientations(
+    tmp_path: Path,
+) -> None:
     clips = [
-        _make_color_video(tmp_path / "landscape.mp4", "1280x720", duration=1.0, color="red"),
-        _make_color_video(tmp_path / "square.mp4", "640x640", duration=1.0, color="green"),
-        _make_color_video(tmp_path / "portrait.mp4", "720x1280", duration=1.0, color="blue"),
+        _make_color_video(
+            tmp_path / "landscape.mp4", "1280x720", duration=1.0, color="red"
+        ),
+        _make_color_video(
+            tmp_path / "square.mp4", "640x640", duration=1.0, color="green"
+        ),
+        _make_color_video(
+            tmp_path / "portrait.mp4", "720x1280", duration=1.0, color="blue"
+        ),
     ]
     output = tmp_path / "base.mp4"
 
-    assemble_vertical_base_video(_ffmpeg(), clips, audio_duration=3.0, output_path=output)
+    assemble_vertical_base_video(
+        _ffmpeg(), clips, audio_duration=3.0, output_path=output
+    )
 
     assert output.exists()
     assert _probe_size(output) == (TARGET_VIDEO_WIDTH, TARGET_VIDEO_HEIGHT)
@@ -150,21 +164,31 @@ def test_assemble_vertical_base_video_handles_mixed_orientations(tmp_path: Path)
 @pytest.mark.slow
 def test_assemble_vertical_base_video_respects_audio_duration(tmp_path: Path) -> None:
     clips = [
-        _make_color_video(tmp_path / "clip_a.mp4", "1280x720", duration=1.0, color="red"),
-        _make_color_video(tmp_path / "clip_b.mp4", "640x640", duration=1.0, color="green"),
+        _make_color_video(
+            tmp_path / "clip_a.mp4", "1280x720", duration=1.0, color="red"
+        ),
+        _make_color_video(
+            tmp_path / "clip_b.mp4", "640x640", duration=1.0, color="green"
+        ),
     ]
     output = tmp_path / "base.mp4"
     audio_duration = 5.0
 
-    assemble_vertical_base_video(_ffmpeg(), clips, audio_duration=audio_duration, output_path=output)
+    assemble_vertical_base_video(
+        _ffmpeg(), clips, audio_duration=audio_duration, output_path=output
+    )
 
     assert output.exists()
     assert math.isclose(_probe_duration(output), audio_duration, abs_tol=0.3)
 
 
 @pytest.mark.slow
-def test_assemble_vertical_base_video_applies_recipe_filter_without_changing_resolution(tmp_path: Path) -> None:
-    clips = [_make_color_video(tmp_path / "clip.mp4", "1280x720", duration=1.0, color="red")]
+def test_assemble_vertical_base_video_applies_recipe_filter_without_changing_resolution(
+    tmp_path: Path,
+) -> None:
+    clips = [
+        _make_color_video(tmp_path / "clip.mp4", "1280x720", duration=1.0, color="red")
+    ]
     output = tmp_path / "base.mp4"
 
     assemble_vertical_base_video(
@@ -182,4 +206,6 @@ def test_assemble_vertical_base_video_applies_recipe_filter_without_changing_res
 @pytest.mark.slow
 def test_empty_clips_raise_value_error(tmp_path: Path) -> None:
     with pytest.raises(ValueError):
-        assemble_vertical_base_video(_ffmpeg(), [], audio_duration=5.0, output_path=tmp_path / "base.mp4")
+        assemble_vertical_base_video(
+            _ffmpeg(), [], audio_duration=5.0, output_path=tmp_path / "base.mp4"
+        )
