@@ -6,7 +6,13 @@ from uuid import uuid4
 from fastapi import APIRouter, HTTPException, Request, UploadFile
 from pydantic import BaseModel
 
-from packages.domain_core.models import AudioSource, CoverTitle, CoverTitleStyle, JobRecord, Language
+from packages.domain_core.models import (
+    AudioSource,
+    CoverTitle,
+    CoverTitleStyle,
+    JobRecord,
+    Language,
+)
 from packages.file_store.repository import FileStoreRepository
 from apps.control_plane.services.music_library import MusicLibrary
 
@@ -80,7 +86,9 @@ def _cover_title_from_request(req: CoverTitleRequest | None) -> CoverTitle:
     )
 
 
-def _make_job_response(record: JobRecord, display_index: str, platforms: list[str]) -> dict:
+def _make_job_response(
+    record: JobRecord, display_index: str, platforms: list[str]
+) -> dict:
     return {
         "job_id": record.job_id,
         "project_id": record.project_id,
@@ -232,7 +240,10 @@ def retry_job(request: Request, job_id: str):
     if not project_id:
         raise HTTPException(status_code=404, detail="job not found")
     record = repo.load_job(project_id, job_id)
-    repo.save_job(project_id, record.model_copy(update={"phase": "queued", "review_status": "none"}))
+    repo.save_job(
+        project_id,
+        record.model_copy(update={"phase": "queued", "review_status": "none"}),
+    )
     dispatcher.enqueue_demo_job(project_id, job_id)
     return {"status": "queued_for_retry", "job_id": job_id}
 
@@ -283,8 +294,14 @@ def update_manual_script(request: Request, job_id: str, payload: UpdateScriptReq
     if not project_id:
         raise HTTPException(status_code=404, detail="job not found")
     record = repo.load_job(project_id, job_id)
-    repo.save_job(project_id, record.model_copy(update={"manual_script": payload.manual_script}))
-    return {"status": "updated", "job_id": job_id, "manual_script": payload.manual_script}
+    repo.save_job(
+        project_id, record.model_copy(update={"manual_script": payload.manual_script})
+    )
+    return {
+        "status": "updated",
+        "job_id": job_id,
+        "manual_script": payload.manual_script,
+    }
 
 
 @router.post("/api/jobs/{job_id}/audio")
@@ -295,20 +312,22 @@ async def upload_job_audio(request: Request, job_id: str, file: UploadFile):
     project_id = _find_job_project(repo, job_id)
     if not project_id:
         raise HTTPException(status_code=404, detail="job not found")
-    
+
     root_dir: Path = request.app.state.root_dir
     audio_dir = root_dir / "workspace" / "projects" / project_id / "audio"
     audio_dir.mkdir(parents=True, exist_ok=True)
-    
+
     safe_name = f"{job_id}_{Path(file.filename).name}"
     dest = audio_dir / safe_name
     content = await file.read()
     dest.write_bytes(content)
-    
+
     relative_path = f"workspace/projects/{project_id}/audio/{safe_name}"
     record = repo.load_job(project_id, job_id)
-    repo.save_job(project_id, record.model_copy(update={"uploaded_audio_path": relative_path}))
-    
+    repo.save_job(
+        project_id, record.model_copy(update={"uploaded_audio_path": relative_path})
+    )
+
     return {
         "status": "uploaded",
         "job_id": job_id,
@@ -360,7 +379,9 @@ def generate_cover_title(payload: GenerateCoverTitleRequest, request: Request):
     now = time.monotonic()
     last = _COVER_TITLE_RATE_LIMIT.get(client_ip, 0)
     if now - last < _COVER_TITLE_COOLDOWN:
-        raise HTTPException(status_code=429, detail=f"请 {_COVER_TITLE_COOLDOWN} 秒后再试")
+        raise HTTPException(
+            status_code=429, detail=f"请 {_COVER_TITLE_COOLDOWN} 秒后再试"
+        )
     _COVER_TITLE_RATE_LIMIT[client_ip] = now
 
     app_config = AppConfigManager()
@@ -372,5 +393,7 @@ def generate_cover_title(payload: GenerateCoverTitleRequest, request: Request):
         model = llm_config.get("model", "deepseek-v4-pro")
 
     gen = ScriptGenerator(_Config())
-    result = gen.generate_cover_title(payload.script_text, payload.product, payload.brand)
+    result = gen.generate_cover_title(
+        payload.script_text, payload.product, payload.brand
+    )
     return result

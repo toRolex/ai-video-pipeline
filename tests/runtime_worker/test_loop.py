@@ -129,18 +129,22 @@ class StubOrchestrator:
         self.phase_calls: list[dict] = []
 
     def run_phase(self, phase: str, ctx: PhaseContext) -> list[ArtifactPointer]:
-        self.phase_calls.append({
-            "phase": phase,
-            "job_id": ctx.job_id,
-            "product": ctx.product,
-        })
+        self.phase_calls.append(
+            {
+                "phase": phase,
+                "job_id": ctx.job_id,
+                "product": ctx.product,
+            }
+        )
         # Return a stub artifact for each phase (relative_path is just a label)
-        return [ArtifactPointer(
-            kind=phase,
-            relative_path=f"projects/{ctx.project_dir.name}/runtime/jobs/{ctx.job_id}/{phase}.stub",
-            url="",
-            size_bytes=0,
-        )]
+        return [
+            ArtifactPointer(
+                kind=phase,
+                relative_path=f"projects/{ctx.project_dir.name}/runtime/jobs/{ctx.job_id}/{phase}.stub",
+                url="",
+                size_bytes=0,
+            )
+        ]
 
 
 # Backward compat aliases (used by older test code, kept for reference)
@@ -183,8 +187,13 @@ def test_http_client_absolute_url_handles_absolute_and_relative_paths() -> None:
         capabilities=["mac-local"],
     )
 
-    assert client._absolute_url("http://example.com/bundle") == "http://example.com/bundle"
-    assert client._absolute_url("https://example.com/bundle") == "https://example.com/bundle"
+    assert (
+        client._absolute_url("http://example.com/bundle") == "http://example.com/bundle"
+    )
+    assert (
+        client._absolute_url("https://example.com/bundle")
+        == "https://example.com/bundle"
+    )
     assert client._absolute_url("/bundle") == "http://127.0.0.1:17890/bundle"
     assert client._absolute_url("bundle") == "http://127.0.0.1:17890/bundle"
 
@@ -225,11 +234,14 @@ def test_worker_loop_passes_product_from_command(tmp_path: Path, monkeypatch) ->
         assert call["product"]  # non-empty
 
 
-def test_worker_loop_reports_success_and_uploads_artifacts(tmp_path: Path, monkeypatch) -> None:
+def test_worker_loop_reports_success_and_uploads_artifacts(
+    tmp_path: Path, monkeypatch
+) -> None:
     api = StubApi()
 
     class FileCreatingOrchestrator(StubOrchestrator):
         """Like StubOrchestrator but creates actual files so upload works."""
+
         def run_phase(self, phase: str, ctx: PhaseContext) -> list[ArtifactPointer]:
             artifacts = super().run_phase(phase, ctx)
             workspace_dir = ctx.root_dir / "workspace"
@@ -253,7 +265,9 @@ def test_worker_loop_reports_success_and_uploads_artifacts(tmp_path: Path, monke
     assert api.reports[0]["started_at"] <= api.reports[0]["finished_at"]
 
 
-def test_worker_loop_writes_job_json_with_command_fields(tmp_path: Path, monkeypatch) -> None:
+def test_worker_loop_writes_job_json_with_command_fields(
+    tmp_path: Path, monkeypatch
+) -> None:
     """The worker should persist command fields (cover_title, music, etc.) in job JSON
     so that the orchestrator's final_review handler can read them."""
     api = StubApi()
@@ -264,14 +278,23 @@ def test_worker_loop_writes_job_json_with_command_fields(tmp_path: Path, monkeyp
         loop.run_forever()
 
     # Verify job JSON was written
-    job_json = tmp_path.resolve() / "projects" / "project-001" / "control" / "jobs" / "job-001.json"
+    job_json = (
+        tmp_path.resolve()
+        / "projects"
+        / "project-001"
+        / "control"
+        / "jobs"
+        / "job-001.json"
+    )
     assert job_json.exists(), f"Job JSON should be written at {job_json}"
     data = json.loads(job_json.read_text(encoding="utf-8"))
     assert data["job_id"] == "job-001"
     assert data["project_id"] == "project-001"
 
 
-def test_worker_loop_skips_llm_when_manual_script_provided(tmp_path: Path, monkeypatch) -> None:
+def test_worker_loop_skips_llm_when_manual_script_provided(
+    tmp_path: Path, monkeypatch
+) -> None:
     """When manual_script is set, the orchestrator should still be called for all phases.
     The orchestrator's _run_script handler detects manual_script in ctx.options."""
     manual_script = "这是手动输入的测试文案，用于验证跳过LLM生成功能。"
@@ -287,7 +310,14 @@ def test_worker_loop_skips_llm_when_manual_script_provided(tmp_path: Path, monke
     assert called == WORKER_PHASES
 
     # The job JSON should contain the fields needed by final_review
-    job_json = tmp_path.resolve() / "projects" / "project-001" / "control" / "jobs" / "job-001.json"
+    job_json = (
+        tmp_path.resolve()
+        / "projects"
+        / "project-001"
+        / "control"
+        / "jobs"
+        / "job-001.json"
+    )
     assert job_json.exists()
 
 
@@ -299,7 +329,9 @@ def test_worker_loop_skips_tts_when_audio_uploaded(tmp_path: Path, monkeypatch) 
     fake_audio = audio_dir / "my_audio.mp3"
     fake_audio.write_bytes(b"\x00" * 256)
 
-    api = StubApiWithManualInputs(uploaded_audio_path=str(fake_audio.relative_to(tmp_path)))
+    api = StubApiWithManualInputs(
+        uploaded_audio_path=str(fake_audio.relative_to(tmp_path))
+    )
     orch = StubOrchestrator()
     loop = _make_loop(tmp_path, api, orch, monkeypatch)
 
@@ -335,7 +367,9 @@ def test_worker_loop_passes_language_in_options(tmp_path: Path, monkeypatch) -> 
     assert seen_options[0].get("language") == "mandarin"
 
 
-def test_worker_loop_constructs_project_dir_correctly(tmp_path: Path, monkeypatch) -> None:
+def test_worker_loop_constructs_project_dir_correctly(
+    tmp_path: Path, monkeypatch
+) -> None:
     """project_dir should be workspace_root/projects/project_id, passed to the orchestrator."""
     api = StubApi()
     orch = StubOrchestrator()

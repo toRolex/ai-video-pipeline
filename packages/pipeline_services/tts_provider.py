@@ -29,7 +29,9 @@ class QwenTTSProvider:
     非流式返回音频 URL，下载后返回 bytes。
     """
 
-    def __init__(self, api_key: str, base_url: str = "https://dashscope.aliyuncs.com/api/v1"):
+    def __init__(
+        self, api_key: str, base_url: str = "https://dashscope.aliyuncs.com/api/v1"
+    ):
         self.api_key = api_key
         self.base_url = base_url.rstrip("/")
 
@@ -56,7 +58,13 @@ class QwenTTSProvider:
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
         }
-        return requests.post(url, headers=headers, json=payload, timeout=180, proxies={"http": None, "https": None})
+        return requests.post(
+            url,
+            headers=headers,
+            json=payload,
+            timeout=180,
+            proxies={"http": None, "https": None},
+        )
 
     def synthesize(self, text: str, config: Any) -> bytes:
         payload = self._build_payload(text, config)
@@ -120,11 +128,11 @@ class MiMoTTSProvider:
                 parts.append(f"【指导】{config.director_guidance}")
             if parts:
                 return "\n".join(parts)
-        
+
         # 简单模式
         if config.style_prompt:
             return config.style_prompt
-        
+
         return "自然 清晰 适合短视频带货口播"
 
     def _build_assistant_content(self, text: str, config: Any) -> str:
@@ -169,7 +177,10 @@ class MiMoTTSProvider:
         payload: dict[str, Any] = {
             "model": config.model,
             "messages": [
-                {"role": "user", "content": config.voice_design_prompt or style_instruction},
+                {
+                    "role": "user",
+                    "content": config.voice_design_prompt or style_instruction,
+                },
                 {"role": "assistant", "content": assistant_content},
             ],
             "audio": {
@@ -231,7 +242,13 @@ class MiMoTTSProvider:
             "api-key": self.api_key,
             "Content-Type": "application/json",
         }
-        resp = requests.post(url, headers=headers, json=payload, timeout=180, proxies={"http": None, "https": None})
+        resp = requests.post(
+            url,
+            headers=headers,
+            json=payload,
+            timeout=180,
+            proxies={"http": None, "https": None},
+        )
 
         if resp.status_code == 429:
             raise TTSQuotaExceededError("TTS 配额超限")

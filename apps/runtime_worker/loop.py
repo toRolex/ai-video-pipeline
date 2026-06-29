@@ -67,7 +67,9 @@ class WorkerLoop:
             self.api.download_input_bundle(command["input_bundle_url"])
 
             root_dir = Path.cwd()
-            project_dir = (root_dir / self.workspace_root / "projects" / command["project_id"]).resolve()
+            project_dir = (
+                root_dir / self.workspace_root / "projects" / command["project_id"]
+            ).resolve()
             job_id = command["job_id"]
 
             # Write job JSON so the orchestrator can read cover_title, music, etc.
@@ -79,7 +81,10 @@ class WorkerLoop:
             for key, val in [
                 ("job_id", job_id),
                 ("project_id", command["project_id"]),
-                ("product", command.get("product", os.environ.get("PRODUCT", "荔枝菌"))),
+                (
+                    "product",
+                    command.get("product", os.environ.get("PRODUCT", "荔枝菌")),
+                ),
                 ("platform", command.get("platform", "")),
                 ("cover_title", command.get("cover_title") or {}),
                 ("music_track_path", command.get("music_track_path", "")),
@@ -120,30 +125,34 @@ class WorkerLoop:
                     continue
                 abs_path = workspace_dir / art.relative_path
                 if abs_path.exists():
-                    uploaded_files.append({
-                        "relative_path": art.relative_path,
-                        "size_bytes": abs_path.stat().st_size,
-                    })
+                    uploaded_files.append(
+                        {
+                            "relative_path": art.relative_path,
+                            "size_bytes": abs_path.stat().st_size,
+                        }
+                    )
             if uploaded_files:
                 self.api.upload_artifacts(command["task_id"], uploaded_files)
 
             # Report success
             finished_at = datetime.now(timezone.utc).isoformat()
-            self.api.report({
-                "worker_id": self.worker_id,
-                "project_id": command["project_id"],
-                "job_id": job_id,
-                "task_id": command["task_id"],
-                "attempt_id": command["attempt_id"],
-                "lease_id": command["lease_id"],
-                "status": "succeeded",
-                "started_at": started_at,
-                "finished_at": finished_at,
-                "artifact_manifest": {"files": uploaded_files},
-                "metrics": {},
-                "logs_summary": "orchestrator completed",
-                "error": {},
-            })
+            self.api.report(
+                {
+                    "worker_id": self.worker_id,
+                    "project_id": command["project_id"],
+                    "job_id": job_id,
+                    "task_id": command["task_id"],
+                    "attempt_id": command["attempt_id"],
+                    "lease_id": command["lease_id"],
+                    "status": "succeeded",
+                    "started_at": started_at,
+                    "finished_at": finished_at,
+                    "artifact_manifest": {"files": uploaded_files},
+                    "metrics": {},
+                    "logs_summary": "orchestrator completed",
+                    "error": {},
+                }
+            )
 
     @property
     def adapter(self) -> MacLocalRuntimeAdapter:

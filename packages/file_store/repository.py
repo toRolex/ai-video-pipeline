@@ -39,16 +39,25 @@ class FileStoreRepository:
         return json.loads(path.read_text(encoding="utf-8"))
 
     def save_job(self, project_id: str, record: JobRecord) -> None:
-        path = project_root(self.root, project_id) / "control" / "jobs" / f"{record.job_id}.json"
+        path = (
+            project_root(self.root, project_id)
+            / "control"
+            / "jobs"
+            / f"{record.job_id}.json"
+        )
         path.parent.mkdir(parents=True, exist_ok=True)
         self._write_json(path, record.model_dump())
 
     def load_job(self, project_id: str, job_id: str) -> JobRecord:
-        path = project_root(self.root, project_id) / "control" / "jobs" / f"{job_id}.json"
+        path = (
+            project_root(self.root, project_id) / "control" / "jobs" / f"{job_id}.json"
+        )
         return JobRecord.model_validate_json(path.read_text(encoding="utf-8"))
 
     def delete_job(self, project_id: str, job_id: str) -> bool:
-        path = project_root(self.root, project_id) / "control" / "jobs" / f"{job_id}.json"
+        path = (
+            project_root(self.root, project_id) / "control" / "jobs" / f"{job_id}.json"
+        )
         if not path.exists():
             return False
         path.unlink()
@@ -76,22 +85,28 @@ class FileStoreRepository:
             display_index = f"{idx:03d}"
             try:
                 record = JobRecord.model_validate_json(f.read_text(encoding="utf-8"))
-                results.append({
-                    "job_id": record.job_id,
-                    "product": record.product,
-                    "phase": record.phase,
-                    "review_status": record.review_status,
-                    "artifacts": [a.model_dump() for a in record.artifacts],
-                    "display_index": display_index,
-                    "name": record.name,
-                    "skip_subtitle": record.skip_subtitle,
-                    "auto_approve": record.auto_approve,
-                })
+                results.append(
+                    {
+                        "job_id": record.job_id,
+                        "product": record.product,
+                        "phase": record.phase,
+                        "review_status": record.review_status,
+                        "artifacts": [a.model_dump() for a in record.artifacts],
+                        "display_index": display_index,
+                        "name": record.name,
+                        "skip_subtitle": record.skip_subtitle,
+                        "auto_approve": record.auto_approve,
+                    }
+                )
             except Exception:
-                results.append({
-                    "job_id": f.stem, "phase": "unknown", "review_status": "unknown",
-                    "display_index": display_index,
-                })
+                results.append(
+                    {
+                        "job_id": f.stem,
+                        "phase": "unknown",
+                        "review_status": "unknown",
+                        "display_index": display_index,
+                    }
+                )
         return results
 
     def list_assets(self, project_id: str) -> list[dict[str, Any]]:
@@ -101,15 +116,22 @@ class FileStoreRepository:
         results: list[dict[str, Any]] = []
         for f in sorted(assets_root.iterdir()):
             if f.is_file():
-                results.append({
-                    "name": f.name,
-                    "size_bytes": f.stat().st_size,
-                    "in_use": False,
-                })
+                results.append(
+                    {
+                        "name": f.name,
+                        "size_bytes": f.stat().st_size,
+                        "in_use": False,
+                    }
+                )
         return results
 
     def delete_asset(self, project_id: str, asset_name: str) -> bool:
-        asset_path = project_root(self.root, project_id) / "runtime" / "source_assets" / asset_name
+        asset_path = (
+            project_root(self.root, project_id)
+            / "runtime"
+            / "source_assets"
+            / asset_name
+        )
         if not asset_path.exists():
             return False
         asset_path.unlink()

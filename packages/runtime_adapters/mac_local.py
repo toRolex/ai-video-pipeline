@@ -35,7 +35,8 @@ class MacLocalRuntimeAdapter(BaseRuntimeAdapter):
         try:
             brew_prefix = subprocess.check_output(
                 ["brew", "--prefix", "ffmpeg"],
-                text=True, stderr=subprocess.DEVNULL,
+                text=True,
+                stderr=subprocess.DEVNULL,
             ).strip()
             path = Path(brew_prefix) / "bin" / "ffmpeg"
             if path.exists():

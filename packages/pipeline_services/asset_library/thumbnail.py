@@ -52,21 +52,27 @@ class ThumbnailGenerator:
         try:
             duration = self._get_duration(video_path)
             mid_time = duration / 2.0
-            
+
             output_path.parent.mkdir(parents=True, exist_ok=True)
-            
+
             cmd = [
                 self.ffmpeg_path,
-                "-ss", f"{mid_time:.2f}",
-                "-i", str(video_path),
-                "-vframes", "1",
-                "-vf", f"scale={THUMBNAIL_WIDTH}:-1,format=yuvj420p",
-                "-q:v", "2",
-                "-update", "1",
+                "-ss",
+                f"{mid_time:.2f}",
+                "-i",
+                str(video_path),
+                "-vframes",
+                "1",
+                "-vf",
+                f"scale={THUMBNAIL_WIDTH}:-1,format=yuvj420p",
+                "-q:v",
+                "2",
+                "-update",
+                "1",
                 "-y",
                 str(output_path),
             ]
-            
+
             subprocess.run(
                 cmd,
                 check=True,
@@ -84,9 +90,12 @@ class ThumbnailGenerator:
     def _get_duration(self, video_path: Path) -> float:
         cmd = [
             self.ffprobe_path,
-            "-v", "error",
-            "-show_entries", "format=duration",
-            "-of", "default=noprint_wrappers=1:nokey=1",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "default=noprint_wrappers=1:nokey=1",
             str(video_path),
         ]
         result = subprocess.run(

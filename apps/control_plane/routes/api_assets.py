@@ -1,4 +1,5 @@
 """Shared asset library routes — all projects see the same global asset pool."""
+
 from __future__ import annotations
 
 import asyncio
@@ -21,7 +22,11 @@ from packages.file_store.paths import (
     shared_source_dir,
 )
 from packages.pipeline_services.asset_library import AssetIndexer, AssetRepository
-from packages.pipeline_services.asset_library.thumbnail import ThumbnailGenerator, _resolve_tool_path, _get_default
+from packages.pipeline_services.asset_library.thumbnail import (
+    ThumbnailGenerator,
+    _resolve_tool_path,
+    _get_default,
+)
 
 router = APIRouter(prefix="/api/assets", tags=["api-assets"])
 
@@ -71,7 +76,12 @@ def get_indexed_assets(
     if not db_path.exists():
         return {
             "assets": [],
-            "stats": {"total_clips": 0, "available_clips": 0, "disabled_clips": 0, "source_videos": 0},
+            "stats": {
+                "total_clips": 0,
+                "available_clips": 0,
+                "disabled_clips": 0,
+                "source_videos": 0,
+            },
         }
 
     conn = sqlite3.connect(str(db_path))
@@ -128,7 +138,8 @@ async def index_assets(request: Request, async_mode: bool = Query(True)):
     source_dir.mkdir(parents=True, exist_ok=True)
 
     videos = [
-        f for f in sorted(source_dir.iterdir())
+        f
+        for f in sorted(source_dir.iterdir())
         if f.suffix.lower() in {".mp4", ".mov", ".avi", ".mkv"}
     ]
 
@@ -151,7 +162,9 @@ async def index_assets(request: Request, async_mode: bool = Query(True)):
     if async_mode:
         task = index_task_manager.create_task(len(new_videos))
         print(f"[INDEX] 创建异步任务: {task.task_id}, 待处理 {len(new_videos)} 个视频")
-        bg_task = asyncio.create_task(_run_index_task(task.task_id, root_dir, new_videos, db_path))
+        bg_task = asyncio.create_task(
+            _run_index_task(task.task_id, root_dir, new_videos, db_path)
+        )
         _background_tasks.add(bg_task)
         bg_task.add_done_callback(_background_tasks.discard)
         return {"task_id": task.task_id, "total_videos": len(new_videos)}
@@ -183,10 +196,16 @@ async def index_assets(request: Request, async_mode: bool = Query(True)):
         total_clips = conn.execute("SELECT COUNT(*) FROM assets").fetchone()[0]
         conn.close()
 
-    return {"indexed": len(new_videos), "skipped": len(videos) - len(new_videos), "total_clips": total_clips}
+    return {
+        "indexed": len(new_videos),
+        "skipped": len(videos) - len(new_videos),
+        "total_clips": total_clips,
+    }
 
 
-async def _run_index_task(task_id: str, root_dir: Path, videos: list[Path], db_path: Path):
+async def _run_index_task(
+    task_id: str, root_dir: Path, videos: list[Path], db_path: Path
+):
     task = index_task_manager.get_task(task_id)
     if not task:
         return
@@ -215,13 +234,18 @@ async def _run_index_task(task_id: str, root_dir: Path, videos: list[Path], db_p
             task.current_video = i + 1
             task.progress = (i / len(videos)) * 100
             task.current_step = "cut"
-            index_task_manager.add_log(task_id, f"[{i+1}/{len(videos)}] 处理视频: {video.name}")
+            index_task_manager.add_log(
+                task_id, f"[{i + 1}/{len(videos)}] 处理视频: {video.name}"
+            )
 
             def log_callback(msg: str) -> None:
                 index_task_manager.add_log(task_id, msg)
 
             await asyncio.get_event_loop().run_in_executor(
-                None, lambda v=video: indexer._ingest_one_video(v, output_base, log_callback=log_callback)
+                None,
+                lambda v=video: indexer._ingest_one_video(
+                    v, output_base, log_callback=log_callback
+                ),
             )
             repository.mark_source_indexed(str(video.resolve()))
             task.current_step = "classify" if i < len(videos) - 1 else "done"
@@ -229,7 +253,11 @@ async def _run_index_task(task_id: str, root_dir: Path, videos: list[Path], db_p
         task.status = TaskStatus.COMPLETED
         task.progress = 100
         task.current_step = "done"
-        task.completed_at = __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat()
+        task.completed_at = (
+            __import__("datetime")
+            .datetime.now(__import__("datetime").timezone.utc)
+            .isoformat()
+        )
         index_task_manager.add_log(task_id, "索引完成")
         print(f"[INDEX] 任务完成: {task_id}, 共处理 {len(videos)} 个视频")
     except Exception as e:
@@ -277,8 +305,14 @@ async def batch_update_status(request: Request):
 
     if status not in {"pending_review", "available", "disabled"}:
         raise HTTPException(status_code=400, detail="invalid status")
-    if not isinstance(asset_ids, list) or not asset_ids or any(not isinstance(i, str) or not i for i in asset_ids):
-        raise HTTPException(status_code=400, detail="asset_ids must be a non-empty string array")
+    if (
+        not isinstance(asset_ids, list)
+        or not asset_ids
+        or any(not isinstance(i, str) or not i for i in asset_ids)
+    ):
+        raise HTTPException(
+            status_code=400, detail="asset_ids must be a non-empty string array"
+        )
 
     root_dir: Path = request.app.state.root_dir
     db_path = shared_asset_db_path(root_dir)
@@ -288,7 +322,9 @@ async def batch_update_status(request: Request):
     conn = sqlite3.connect(str(db_path))
     updated = 0
     for aid in asset_ids:
-        cursor = conn.execute("UPDATE assets SET status = ? WHERE asset_id = ?", (status, aid))
+        cursor = conn.execute(
+            "UPDATE assets SET status = ? WHERE asset_id = ?", (status, aid)
+        )
         updated += cursor.rowcount
     conn.commit()
     conn.close()
@@ -302,8 +338,14 @@ async def batch_update_fields(request: Request):
         raise HTTPException(status_code=400, detail="request body must be object")
 
     asset_ids = body.get("asset_ids")
-    if not isinstance(asset_ids, list) or not asset_ids or any(not isinstance(i, str) or not i for i in asset_ids):
-        raise HTTPException(status_code=400, detail="asset_ids must be a non-empty string array")
+    if (
+        not isinstance(asset_ids, list)
+        or not asset_ids
+        or any(not isinstance(i, str) or not i for i in asset_ids)
+    ):
+        raise HTTPException(
+            status_code=400, detail="asset_ids must be a non-empty string array"
+        )
 
     new_product = body.get("product")
     new_category = body.get("category")
@@ -313,11 +355,14 @@ async def batch_update_fields(request: Request):
 
     if new_category:
         from packages.pipeline_services.asset_library.models import Category
+
         try:
             Category(new_category)
         except ValueError:
             valid = [c.value for c in Category]
-            raise HTTPException(status_code=400, detail=f"invalid category, must be one of: {valid}")
+            raise HTTPException(
+                status_code=400, detail=f"invalid category, must be one of: {valid}"
+            )
 
     root_dir: Path = request.app.state.root_dir
     db_path = shared_asset_db_path(root_dir)
@@ -355,7 +400,7 @@ async def batch_update_fields(request: Request):
 
         conn.execute(
             "UPDATE assets SET product = ?, category = ?, file_path = ? WHERE asset_id = ?",
-            (product, category, new_file_path, aid)
+            (product, category, new_file_path, aid),
         )
         updated += 1
 
@@ -380,7 +425,9 @@ async def patch_asset_status(request: Request, asset_id: str):
         return {"updated": 0}
 
     conn = sqlite3.connect(str(db_path))
-    cursor = conn.execute("UPDATE assets SET status = ? WHERE asset_id = ?", (status, asset_id))
+    cursor = conn.execute(
+        "UPDATE assets SET status = ? WHERE asset_id = ?", (status, asset_id)
+    )
     updated = cursor.rowcount
     conn.commit()
     conn.close()
@@ -411,11 +458,14 @@ async def patch_asset_fields(request: Request, asset_id: str):
 
     if new_category:
         from packages.pipeline_services.asset_library.models import Category
+
         try:
             Category(new_category)
         except ValueError:
             valid = [c.value for c in Category]
-            raise HTTPException(status_code=400, detail=f"invalid category, must be one of: {valid}")
+            raise HTTPException(
+                status_code=400, detail=f"invalid category, must be one of: {valid}"
+            )
 
     product = new_product or record.product
     category = new_category or record.category.value
@@ -436,7 +486,7 @@ async def patch_asset_fields(request: Request, asset_id: str):
     conn = sqlite3.connect(str(db_path))
     conn.execute(
         "UPDATE assets SET product = ?, category = ?, file_path = ? WHERE asset_id = ?",
-        (product, category, new_file_path, asset_id)
+        (product, category, new_file_path, asset_id),
     )
     conn.commit()
     conn.close()
@@ -497,11 +547,20 @@ def migrate_project_assets(request: Request):
                                 status, usage_count, source_video, tags, created_at, last_used_at)
                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                             (
-                                d["asset_id"], d["file_path"], d["category"], d["product"],
-                                d["confidence"], d["duration_seconds"], d["status"],
-                                d["usage_count"], d["source_video"],
-                                d["tags"] if isinstance(d["tags"], str) else json.dumps(d["tags"], ensure_ascii=False),
-                                d["created_at"], d["last_used_at"],
+                                d["asset_id"],
+                                d["file_path"],
+                                d["category"],
+                                d["product"],
+                                d["confidence"],
+                                d["duration_seconds"],
+                                d["status"],
+                                d["usage_count"],
+                                d["source_video"],
+                                d["tags"]
+                                if isinstance(d["tags"], str)
+                                else json.dumps(d["tags"], ensure_ascii=False),
+                                d["created_at"],
+                                d["last_used_at"],
                             ),
                         )
                         migrated_clips += 1
@@ -542,8 +601,14 @@ async def batch_delete_assets(request: Request):
         raise HTTPException(status_code=400, detail="request body must be object")
 
     asset_ids = body.get("asset_ids")
-    if not isinstance(asset_ids, list) or not asset_ids or any(not isinstance(i, str) or not i for i in asset_ids):
-        raise HTTPException(status_code=400, detail="asset_ids must be a non-empty string array")
+    if (
+        not isinstance(asset_ids, list)
+        or not asset_ids
+        or any(not isinstance(i, str) or not i for i in asset_ids)
+    ):
+        raise HTTPException(
+            status_code=400, detail="asset_ids must be a non-empty string array"
+        )
 
     root_dir: Path = request.app.state.root_dir
     db_path = shared_asset_db_path(root_dir)
@@ -559,7 +624,9 @@ async def batch_delete_assets(request: Request):
     source_videos_to_check: set[str] = set()
 
     for aid in asset_ids:
-        row = conn.execute("SELECT file_path, source_video FROM assets WHERE asset_id = ?", (aid,)).fetchone()
+        row = conn.execute(
+            "SELECT file_path, source_video FROM assets WHERE asset_id = ?", (aid,)
+        ).fetchone()
         if row:
             file_path = Path(row["file_path"])
             source_video = row["source_video"]

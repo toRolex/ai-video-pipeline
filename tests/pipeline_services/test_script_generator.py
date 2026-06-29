@@ -3,18 +3,27 @@ from __future__ import annotations
 import json
 from unittest.mock import MagicMock, patch
 
-from packages.pipeline_services.script_service.generator import ScriptGenerator, ScriptResult
+from packages.pipeline_services.script_service.generator import (
+    ScriptGenerator,
+    ScriptResult,
+)
 from packages.pipeline_services.script_service.prompts import (
     build_first_half_messages,
     build_second_half_messages,
     build_cantonese_conversion_messages,
 )
-from packages.pipeline_services.script_service.quality import validate_script, validate_cantonese_script
+from packages.pipeline_services.script_service.quality import (
+    validate_script,
+    validate_cantonese_script,
+)
 
 
 class TestValidateScript:
     def test_valid_script_passes(self):
-        text = "今天给大家介绍一种美味食材。" * 11 + "滋元堂的羊肚菌来自云南深山，充分烹熟后口感鲜美，营养丰富。"
+        text = (
+            "今天给大家介绍一种美味食材。" * 11
+            + "滋元堂的羊肚菌来自云南深山，充分烹熟后口感鲜美，营养丰富。"
+        )
         result = validate_script(text, "羊肚菌", "滋元堂")
         assert result["ok"] is True
         assert result["errors"] == []
@@ -32,37 +41,55 @@ class TestValidateScript:
         assert any("字数" in e for e in result["errors"])
 
     def test_missing_product_rejected(self):
-        text = "今天介绍一种美味食材的做法。滋元堂的产品来自云南深山，充分烹熟后口感非常好，推荐大家尝试。" * 3
+        text = (
+            "今天介绍一种美味食材的做法。滋元堂的产品来自云南深山，充分烹熟后口感非常好，推荐大家尝试。"
+            * 3
+        )
         result = validate_script(text, "羊肚菌", "滋元堂")
         assert result["ok"] is False
         assert any("品名" in e for e in result["errors"])
 
     def test_missing_brand_rejected(self):
-        text = "今天介绍羊肚菌的做法。这种食材来自云南深山，充分烹熟后口感非常好，推荐大家尝试购买品尝。" * 3
+        text = (
+            "今天介绍羊肚菌的做法。这种食材来自云南深山，充分烹熟后口感非常好，推荐大家尝试购买品尝。"
+            * 3
+        )
         result = validate_script(text, "羊肚菌", "滋元堂")
         assert result["ok"] is False
         assert any("品牌" in e or "滋元堂" in e for e in result["errors"])
 
     def test_missing_cook_thoroughly_rejected(self):
-        text = "今天介绍羊肚菌的做法。滋元堂的产品来自云南深山，口感非常好，推荐大家尝试购买品尝享用。" * 3
+        text = (
+            "今天介绍羊肚菌的做法。滋元堂的产品来自云南深山，口感非常好，推荐大家尝试购买品尝享用。"
+            * 3
+        )
         result = validate_script(text, "羊肚菌", "滋元堂")
         assert result["ok"] is False
         assert any("充分烹熟" in e for e in result["errors"])
 
     def test_emoji_rejected(self):
-        text = "今天介绍羊肚菌的做法😊。滋元堂的产品来自云南深山，充分烹熟后口感非常好，推荐大家尝试购买品尝。" * 3
+        text = (
+            "今天介绍羊肚菌的做法😊。滋元堂的产品来自云南深山，充分烹熟后口感非常好，推荐大家尝试购买品尝。"
+            * 3
+        )
         result = validate_script(text, "羊肚菌", "滋元堂")
         assert result["ok"] is False
         assert any("emoji" in e.lower() or "表情" in e for e in result["errors"])
 
     def test_medical_terms_rejected(self):
-        text = "今天介绍羊肚菌的做法。滋元堂的产品可以治疗疾病，充分烹熟后口感非常好，推荐大家尝试购买品尝。" * 3
+        text = (
+            "今天介绍羊肚菌的做法。滋元堂的产品可以治疗疾病，充分烹熟后口感非常好，推荐大家尝试购买品尝。"
+            * 3
+        )
         result = validate_script(text, "羊肚菌", "滋元堂")
         assert result["ok"] is False
         assert any("医疗" in e or "禁词" in e for e in result["errors"])
 
     def test_brand_appearing_twice_rejected(self):
-        text = "滋元堂今天介绍羊肚菌的做法。滋元堂滋元堂的产品来自云南深山，充分烹熟后口感非常好，推荐尝试。" * 3
+        text = (
+            "滋元堂今天介绍羊肚菌的做法。滋元堂滋元堂的产品来自云南深山，充分烹熟后口感非常好，推荐尝试。"
+            * 3
+        )
         result = validate_script(text, "羊肚菌", "滋元堂")
         assert result["ok"] is False
         assert any("品牌" in e and "次" in e for e in result["errors"])
@@ -106,18 +133,24 @@ class TestScriptGenerator:
 
     @patch.object(ScriptGenerator, "_call_llm")
     def test_generate_returns_script_result(self, mock_call_llm):
-        first_json = json.dumps({
-            "sentence_1": "云南深山里藏着一种宝贝。",
-            "sentence_2": "它就是鲜嫩的羊肚菌。",
-            "sentence_3": "采摘后立刻送到你手中。",
-            "sentence_4": "今天教大家怎么做好吃。",
-        }, ensure_ascii=False)
-        second_json = json.dumps({
-            "sentence_5": "锅里放油烧热下菌子。",
-            "sentence_6": "充分烹熟才能安心享用。",
-            "sentence_7": "滋元堂的品质值得信赖。",
-            "sentence_8": "赶紧下单尝尝吧。",
-        }, ensure_ascii=False)
+        first_json = json.dumps(
+            {
+                "sentence_1": "云南深山里藏着一种宝贝。",
+                "sentence_2": "它就是鲜嫩的羊肚菌。",
+                "sentence_3": "采摘后立刻送到你手中。",
+                "sentence_4": "今天教大家怎么做好吃。",
+            },
+            ensure_ascii=False,
+        )
+        second_json = json.dumps(
+            {
+                "sentence_5": "锅里放油烧热下菌子。",
+                "sentence_6": "充分烹熟才能安心享用。",
+                "sentence_7": "滋元堂的品质值得信赖。",
+                "sentence_8": "赶紧下单尝尝吧。",
+            },
+            ensure_ascii=False,
+        )
         mock_call_llm.side_effect = [first_json, second_json] * 3
 
         gen = self._make_generator()
@@ -140,7 +173,10 @@ class TestScriptGenerator:
 
 class TestValidateCantoneseScript:
     def test_valid_cantonese_passes(self):
-        text = "今日同大家介紹一種美味食材。" * 11 + "滋元堂嘅羊肚菌嚟自雲南深山，徹底煮熟之後口感好正，營養豐富。"
+        text = (
+            "今日同大家介紹一種美味食材。" * 11
+            + "滋元堂嘅羊肚菌嚟自雲南深山，徹底煮熟之後口感好正，營養豐富。"
+        )
         result = validate_cantonese_script(text, "羊肚菌", "滋元堂")
         assert result["ok"] is True
         assert result["errors"] == []
@@ -158,50 +194,74 @@ class TestValidateCantoneseScript:
         assert any("字数" in e for e in result["errors"])
 
     def test_missing_product_rejected(self):
-        text = "今日介紹一種美味食材嘅做法。滋元堂嘅產品嚟自雲南深山，徹底煮熟之後口感好正，推薦大家嘗試。" * 3
+        text = (
+            "今日介紹一種美味食材嘅做法。滋元堂嘅產品嚟自雲南深山，徹底煮熟之後口感好正，推薦大家嘗試。"
+            * 3
+        )
         result = validate_cantonese_script(text, "羊肚菌", "滋元堂")
         assert result["ok"] is False
         assert any("品名" in e for e in result["errors"])
 
     def test_missing_brand_rejected(self):
-        text = "今日介紹羊肚菌嘅做法。呢種食材嚟自雲南深山，徹底煮熟之後口感好正，推薦大家嘗試購買品嚐。" * 3
+        text = (
+            "今日介紹羊肚菌嘅做法。呢種食材嚟自雲南深山，徹底煮熟之後口感好正，推薦大家嘗試購買品嚐。"
+            * 3
+        )
         result = validate_cantonese_script(text, "羊肚菌", "滋元堂")
         assert result["ok"] is False
         assert any("品牌" in e for e in result["errors"])
 
     def test_missing_cook_term_rejected(self):
-        text = "今日介紹羊肚菌嘅做法。滋元堂嘅產品嚟自雲南深山，口感好正，推薦大家嘗試購買品嚐享用。" * 3
+        text = (
+            "今日介紹羊肚菌嘅做法。滋元堂嘅產品嚟自雲南深山，口感好正，推薦大家嘗試購買品嚐享用。"
+            * 3
+        )
         result = validate_cantonese_script(text, "羊肚菌", "滋元堂")
         assert result["ok"] is False
         assert any("烹熟" in e for e in result["errors"])
 
     def test_cantonese_cook_synonym_accepted(self):
-        text = "今日介紹羊肚菌嘅做法。" * 12 + "滋元堂嘅產品嚟自雲南深山，煮到熟透之後口感好正，推薦大家嘗試購買。"
+        text = (
+            "今日介紹羊肚菌嘅做法。" * 12
+            + "滋元堂嘅產品嚟自雲南深山，煮到熟透之後口感好正，推薦大家嘗試購買。"
+        )
         result = validate_cantonese_script(text, "羊肚菌", "滋元堂")
         assert result["ok"] is True
 
     def test_emoji_rejected(self):
-        text = "今日介紹羊肚菌嘅做法😊。滋元堂嘅產品嚟自雲南深山，徹底煮熟之後口感好正，推薦大家嘗試購買品嚐。" * 3
+        text = (
+            "今日介紹羊肚菌嘅做法😊。滋元堂嘅產品嚟自雲南深山，徹底煮熟之後口感好正，推薦大家嘗試購買品嚐。"
+            * 3
+        )
         result = validate_cantonese_script(text, "羊肚菌", "滋元堂")
         assert result["ok"] is False
         assert any("emoji" in e.lower() or "表情" in e for e in result["errors"])
 
     def test_medical_terms_rejected(self):
         # Medical terms should be caught even when length is valid
-        text = "今日介紹羊肚菌嘅做法。滋元堂嘅產品可以治療疾病，徹底煮熟之後口感好正。" * 4 + "推薦大家嘗試購買品嚐。"
+        text = (
+            "今日介紹羊肚菌嘅做法。滋元堂嘅產品可以治療疾病，徹底煮熟之後口感好正。" * 4
+            + "推薦大家嘗試購買品嚐。"
+        )
         result = validate_cantonese_script(text, "羊肚菌", "滋元堂")
         assert result["ok"] is False
         assert any("医疗" in e or "禁词" in e for e in result["errors"])
 
     def test_brand_multiple_occurrences_accepted(self):
         """粤语版不要求品牌恰好出现1次，出现多次也接受。"""
-        text = "滋元堂今日介紹羊肚菌嘅做法。滋元堂嘅產品嚟自雲南深山，徹底煮熟之後口感好正。" * 5
+        text = (
+            "滋元堂今日介紹羊肚菌嘅做法。滋元堂嘅產品嚟自雲南深山，徹底煮熟之後口感好正。"
+            * 5
+        )
         result = validate_cantonese_script(text, "羊肚菌", "滋元堂")
         assert result["ok"] is True
 
     def test_product_multiple_occurrences_accepted(self):
         """粤语版不要求品名恰好出现1次，出现多次也接受。"""
-        text = "羊肚菌係一種美味食材。羊肚菌嚟自雲南深山，滋元堂嘅品質值得信賴，徹底煮熟之後先食得安心。" * 4
+        text = (
+            "羊肚菌係一種美味食材。羊肚菌嚟自雲南深山，滋元堂嘅品質值得信賴，徹底煮熟之後先食得安心。"
+            * 4
+        )
         result = validate_cantonese_script(text, "羊肚菌", "滋元堂")
         assert result["ok"] is True
 
@@ -255,18 +315,24 @@ class TestScriptGeneratorCantonese:
     @patch.object(ScriptGenerator, "_call_llm")
     def test_run_cantonese_returns_cantonese_text(self, mock_call_llm):
         # Each sentence ~20+ chars to reach 150+ compact_len across 8 sentences
-        first_json = json.dumps({
-            "sentence_1": "云南深山里面藏着一种鲜嫩美味的羊肚菌宝贝。",
-            "sentence_2": "它生长在高海拔无污染的山林之中静静等待。",
-            "sentence_3": "采摘后立刻送到你手中保证绝对新鲜不流失。",
-            "sentence_4": "今天教大家怎么做既营养丰富又好吃的美味。",
-        }, ensure_ascii=False)
-        second_json = json.dumps({
-            "sentence_5": "锅里放油烧热下菌子翻炒香气四溢满屋子。",
-            "sentence_6": "充分烹熟才能安心享用这鲜美无比的好菌子。",
-            "sentence_7": "滋元堂的品质值得信赖放心大胆购买和品尝。",
-            "sentence_8": "赶紧下单品尝这云南深山里面的美味佳肴吧。",
-        }, ensure_ascii=False)
+        first_json = json.dumps(
+            {
+                "sentence_1": "云南深山里面藏着一种鲜嫩美味的羊肚菌宝贝。",
+                "sentence_2": "它生长在高海拔无污染的山林之中静静等待。",
+                "sentence_3": "采摘后立刻送到你手中保证绝对新鲜不流失。",
+                "sentence_4": "今天教大家怎么做既营养丰富又好吃的美味。",
+            },
+            ensure_ascii=False,
+        )
+        second_json = json.dumps(
+            {
+                "sentence_5": "锅里放油烧热下菌子翻炒香气四溢满屋子。",
+                "sentence_6": "充分烹熟才能安心享用这鲜美无比的好菌子。",
+                "sentence_7": "滋元堂的品质值得信赖放心大胆购买和品尝。",
+                "sentence_8": "赶紧下单品尝这云南深山里面的美味佳肴吧。",
+            },
+            ensure_ascii=False,
+        )
         # Long enough to pass 150-char Cantonese QA
         cantonese_text = (
             "雲南深山裡邊藏住一種寶貝，就係鮮嫩嘅羊肚菌，採摘之後即刻送到你手中，今日教大家點樣煮先好食。"
@@ -290,7 +356,9 @@ class TestScriptGeneratorCantonese:
 
     def test_run_cantonese_mock_returns_cantonese_stub(self):
         gen = self._make_generator()
-        result = gen.run(product="羊肚菌", brand="滋元堂", mock=True, language="cantonese")
+        result = gen.run(
+            product="羊肚菌", brand="滋元堂", mock=True, language="cantonese"
+        )
 
         assert isinstance(result, ScriptResult)
         assert result.mock is True

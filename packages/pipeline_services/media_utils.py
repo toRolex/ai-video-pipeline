@@ -26,7 +26,16 @@ def write_concat_file(list_path: Path, clips: list[Path]) -> None:
 def get_media_duration(file_path: Path) -> float:
     ffprobe = os.environ.get("FFPROBE_PATH", "ffprobe")
     result = subprocess.run(
-        [ffprobe, "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", str(file_path)],
+        [
+            ffprobe,
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "default=noprint_wrappers=1:nokey=1",
+            str(file_path),
+        ],
         check=True,
         capture_output=True,
         text=True,
@@ -36,7 +45,9 @@ def get_media_duration(file_path: Path) -> float:
     return float(result.stdout.strip())
 
 
-def normalize_clip_to_vertical(ffmpeg_path: str, input_path: Path, output_path: Path) -> Path:
+def normalize_clip_to_vertical(
+    ffmpeg_path: str, input_path: Path, output_path: Path
+) -> Path:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     filter_complex = (
         "[0:v]split=2[bg_src][fg_src];"
@@ -88,7 +99,9 @@ def assemble_vertical_base_video(
         raise ValueError("clip_paths must not be empty")
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    temp_dir = Path(tempfile.mkdtemp(prefix=f".{output_path.stem}_", dir=str(output_path.parent)))
+    temp_dir = Path(
+        tempfile.mkdtemp(prefix=f".{output_path.stem}_", dir=str(output_path.parent))
+    )
     normalized_paths: list[Path] = []
     concat_file = temp_dir / "concat_list.txt"
 
@@ -148,6 +161,7 @@ def get_ffmpeg_path() -> str:
     优先级：环境变量 FFMPEG_PATH > app_config.json media.ffmpeg_path > "ffmpeg"
     """
     import os
+
     env_path = os.getenv("FFMPEG_PATH", "").strip()
     if env_path:
         return env_path
@@ -163,6 +177,7 @@ def get_ffprobe_path() -> str:
     优先级：环境变量 FFPROBE_PATH > app_config.json media.ffprobe_path > "ffprobe"
     """
     import os
+
     env_path = os.getenv("FFPROBE_PATH", "").strip()
     if env_path:
         return env_path
@@ -176,11 +191,23 @@ def get_video_size(video_path: Path) -> tuple[int, int]:
     """获取视频分辨率 (width, height)。"""
     ffprobe = get_ffprobe_path()
     result = subprocess.run(
-        [ffprobe, "-v", "error", "-select_streams", "v:0",
-         "-show_entries", "stream=width,height",
-         "-of", "csv=p=0:s=x", str(video_path)],
-        capture_output=True, text=True, timeout=30,
-        encoding="utf-8", errors="replace",
+        [
+            ffprobe,
+            "-v",
+            "error",
+            "-select_streams",
+            "v:0",
+            "-show_entries",
+            "stream=width,height",
+            "-of",
+            "csv=p=0:s=x",
+            str(video_path),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        encoding="utf-8",
+        errors="replace",
     )
     if result.returncode != 0:
         raise RuntimeError(f"ffprobe 失败: {result.stderr}")
@@ -193,6 +220,9 @@ def run_ffmpeg(args: list[str], timeout: int = 300) -> subprocess.CompletedProce
     ffmpeg = get_ffmpeg_path()
     return subprocess.run(
         [ffmpeg] + args,
-        capture_output=True, text=True, timeout=timeout,
-        encoding="utf-8", errors="replace",
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        encoding="utf-8",
+        errors="replace",
     )

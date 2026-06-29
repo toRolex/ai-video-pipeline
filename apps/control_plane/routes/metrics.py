@@ -1,4 +1,5 @@
 """API routes for video metrics: upload, overview, videos, topics, scan."""
+
 from __future__ import annotations
 
 import tempfile
@@ -21,6 +22,7 @@ def _store(request: Request) -> MetricsStore:
 
 
 # ── Upload ────────────────────────────────────────────────────────────────────────
+
 
 @router.post("/upload")
 async def upload_metrics(file: UploadFile, request: Request) -> dict[str, int]:
@@ -62,6 +64,7 @@ async def upload_metrics(file: UploadFile, request: Request) -> dict[str, int]:
 
 # ── Overview ──────────────────────────────────────────────────────────────────────
 
+
 @router.get("/overview")
 def get_overview(
     request: Request,
@@ -75,6 +78,7 @@ def get_overview(
 
 # ── Videos ────────────────────────────────────────────────────────────────────────
 
+
 @router.get("/videos")
 def get_videos(
     request: Request,
@@ -87,12 +91,16 @@ def get_videos(
     """Paginated, sorted video list with optional search."""
     store = _store(request)
     return store.get_videos(
-        sort_by=sort_by, platform=platform, search=search,
-        page=page, page_size=page_size,
+        sort_by=sort_by,
+        platform=platform,
+        search=search,
+        page=page,
+        page_size=page_size,
     )
 
 
 # ── Topics ────────────────────────────────────────────────────────────────────────
+
 
 @router.get("/topics")
 def get_topics(
@@ -107,6 +115,7 @@ def get_topics(
 
 
 # ── Scan ──────────────────────────────────────────────────────────────────────────
+
 
 @router.post("/scan")
 def scan_data_directory(request: Request) -> dict[str, Any]:
@@ -123,7 +132,12 @@ def scan_data_directory(request: Request) -> dict[str, Any]:
     data_dir = root_dir / "data"
 
     if not data_dir.exists():
-        return {"files_processed": 0, "total_inserted": 0, "total_updated": 0, "files": []}
+        return {
+            "files_processed": 0,
+            "total_inserted": 0,
+            "total_updated": 0,
+            "files": [],
+        }
 
     files_processed = 0
     total_inserted = 0
@@ -151,8 +165,9 @@ def scan_data_directory(request: Request) -> dict[str, Any]:
             if ext == ".xlsx":
                 result = store.import_xlsx(path, platform=platform)
             else:
-                result = store.import_csv(path.read_bytes(), platform=platform,
-                                          filename=path.name)
+                result = store.import_csv(
+                    path.read_bytes(), platform=platform, filename=path.name
+                )
             files_processed += 1
             total_inserted += result.get("inserted", 0)
             total_updated += result.get("updated", 0)

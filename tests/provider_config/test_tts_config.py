@@ -233,7 +233,9 @@ def test_project_config_without_global() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         projects_dir = Path(tmpdir) / "projects" / "proj-1"
         projects_dir.mkdir(parents=True)
-        (projects_dir / "tts_config.json").write_text(json.dumps({"model": "project-only"}))
+        (projects_dir / "tts_config.json").write_text(
+            json.dumps({"model": "project-only"})
+        )
 
         manager = TTSConfigManager(config_dir=tmpdir)
         config = manager.get_config(project_id="proj-1")
@@ -244,11 +246,15 @@ def test_project_config_without_global() -> None:
 def test_project_overrides_global() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         global_path = Path(tmpdir) / "tts_config.json"
-        global_path.write_text(json.dumps({"model": "global-model", "voice": "GlobalVoice"}))
+        global_path.write_text(
+            json.dumps({"model": "global-model", "voice": "GlobalVoice"})
+        )
 
         projects_dir = Path(tmpdir) / "projects" / "proj-1"
         projects_dir.mkdir(parents=True)
-        (projects_dir / "tts_config.json").write_text(json.dumps({"model": "project-model"}))
+        (projects_dir / "tts_config.json").write_text(
+            json.dumps({"model": "project-model"})
+        )
 
         manager = TTSConfigManager(config_dir=tmpdir)
         config = manager.get_config(project_id="proj-1")
@@ -338,6 +344,7 @@ def test_merge_multiple_configs() -> None:
 def test_tts_config_from_app_config() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         from packages.provider_config.app_config import AppConfigManager
+
         app_manager = AppConfigManager(config_dir=tmpdir)
         app_manager.set_tts("model", "from-app-config")
 
@@ -352,5 +359,6 @@ def test_tts_config_save_to_app_config() -> None:
         tts_manager.save_config(TTSConfig(model="saved-model"))
 
         from packages.provider_config.app_config import AppConfigManager
+
         app_manager = AppConfigManager(config_dir=tmpdir)
         assert app_manager.get_tts_value("model") == "saved-model"

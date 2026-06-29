@@ -77,8 +77,14 @@ def approve_review(job_id: str, payload: ReviewAction, request: Request) -> dict
         nxt = next_phase(record.phase)
     except ValueError:
         nxt = "completed"
-    repo.save_job(project_id, record.model_copy(update={"phase": nxt, "review_status": "approved"}))
-    repo.append_review_event(project_id, {"job_id": job_id, "gate": payload.review_gate, "action": "approved"})
+    repo.save_job(
+        project_id,
+        record.model_copy(update={"phase": nxt, "review_status": "approved"}),
+    )
+    repo.append_review_event(
+        project_id,
+        {"job_id": job_id, "gate": payload.review_gate, "action": "approved"},
+    )
     logger.info(f"[Review] 审核通过: job={job_id}, phase={record.phase} → {nxt}")
     return {"status": "approved", "job_id": job_id, "next_phase": nxt}
 
@@ -90,21 +96,24 @@ def reject_review(job_id: str, payload: ReviewAction, request: Request) -> dict:
     if not project_id:
         raise HTTPException(status_code=404, detail="job not found")
     record = repo.load_job(project_id, job_id)
-    
+
     if record.phase == "tts_review":
         reject_target = "tts_generating"
     elif record.phase == "asset_review":
         reject_target = "asset_retrieving"
     else:
         reject_target = "queued"
-    
+
     repo.save_job(
         project_id,
         record.model_copy(update={"phase": reject_target, "review_status": "none"}),
     )
     dispatcher = request.app.state.dispatcher
     dispatcher.enqueue_demo_job(project_id, job_id)
-    repo.append_review_event(project_id, {"job_id": job_id, "gate": payload.review_gate, "action": "rejected"})
+    repo.append_review_event(
+        project_id,
+        {"job_id": job_id, "gate": payload.review_gate, "action": "rejected"},
+    )
     logger.info(f"[Review] 打回重做: job={job_id}, target={reject_target}")
     return {"status": "rejected", "job_id": job_id, "next_phase": reject_target}
 
@@ -133,7 +142,9 @@ def edit_script(
         try:
             data = json.loads(json_file.read_text(encoding="utf-8"))
             data["video_script"] = payload.script_text
-            json_file.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+            json_file.write_text(
+                json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
         except Exception as e:
             logger.warning(f"[Review] 更新 JSON 文件失败: {e}")
 
@@ -168,7 +179,9 @@ def regenerate_with_prompt(
     if not product:
         product = job_dir.parent.parent.name
 
-    logger.info(f"[Review] 附带提示词重新生成: job={job_id}, product={product}, prompt={payload.custom_prompt[:50]}...")
+    logger.info(
+        f"[Review] 附带提示词重新生成: job={job_id}, product={product}, prompt={payload.custom_prompt[:50]}..."
+    )
 
     try:
         bridge = LegacyScriptBridge(root_dir)
@@ -178,7 +191,9 @@ def regenerate_with_prompt(
             mock=False,
             custom_prompt=payload.custom_prompt,
         )
-        logger.info(f"[Review] 重新生成成功: job={job_id}, txt={result.get('txt_path')}")
+        logger.info(
+            f"[Review] 重新生成成功: job={job_id}, txt={result.get('txt_path')}"
+        )
         return {
             "job_id": job_id,
             "status": "regenerated",
@@ -210,14 +225,18 @@ def reject_clip(job_id: str, payload: RejectClipRequest, request: Request) -> di
         raise HTTPException(status_code=500, detail=f"Failed to read clips: {e}")
 
     if payload.clip_index < 0 or payload.clip_index >= len(clips):
-        raise HTTPException(status_code=400, detail=f"Invalid clip index: {payload.clip_index}")
+        raise HTTPException(
+            status_code=400, detail=f"Invalid clip index: {payload.clip_index}"
+        )
 
     rejected_clip = clips[payload.clip_index]
     sentence = rejected_clip.get("sentence", "")
     category = rejected_clip.get("category", "")
     rejected_asset_id = rejected_clip.get("asset_id", "")
 
-    logger.info(f"[Review] 打回单个素材: job={job_id}, index={payload.clip_index}, sentence={sentence[:30]}..., asset={rejected_asset_id}")
+    logger.info(
+        f"[Review] 打回单个素材: job={job_id}, index={payload.clip_index}, sentence={sentence[:30]}..., asset={rejected_asset_id}"
+    )
 
     if not _find_job_project(FileStoreRepository(root_dir), job_id):
         for project_dir in (root_dir / "workspace" / "projects").iterdir():
@@ -231,14 +250,19 @@ def reject_clip(job_id: str, payload: RejectClipRequest, request: Request) -> di
         raise HTTPException(status_code=404, detail="project not found for job")
 
     product = ""
-    control_jobs_dir = root_dir / "workspace" / "projects" / project_id / "control" / "jobs"
+    control_jobs_dir = (
+        root_dir / "workspace" / "projects" / project_id / "control" / "jobs"
+    )
     job_json_path = control_jobs_dir / f"{job_id}.json"
     if job_json_path.exists():
         job_data = json.loads(job_json_path.read_text(encoding="utf-8"))
         product = job_data.get("product", "")
 
     try:
-        from packages.pipeline_services.asset_library import AssetRepository, AssetRetriever
+        from packages.pipeline_services.asset_library import (
+            AssetRepository,
+            AssetRetriever,
+        )
         from packages.file_store.paths import shared_asset_db_path
 
         db_path = shared_asset_db_path(root_dir)
@@ -246,6 +270,7 @@ def reject_clip(job_id: str, payload: RejectClipRequest, request: Request) -> di
         _ = AssetRetriever(repo)
 
         from packages.pipeline_services.asset_library.models import Category
+
         category_enum = None
         for cat in Category:
             if cat.value == category:
@@ -254,7 +279,11 @@ def reject_clip(job_id: str, payload: RejectClipRequest, request: Request) -> di
 
         if category_enum:
             candidates = repo.query_by_category(product, category_enum)
-            candidates = [c for c in candidates if c.asset_id != rejected_asset_id and c.usage_count < 2]
+            candidates = [
+                c
+                for c in candidates
+                if c.asset_id != rejected_asset_id and c.usage_count < 2
+            ]
             if candidates:
                 chosen = random.choice(candidates)
                 clips[payload.clip_index] = {
@@ -266,20 +295,28 @@ def reject_clip(job_id: str, payload: RejectClipRequest, request: Request) -> di
                 }
                 repo.decrement_usage(rejected_asset_id)
                 repo.increment_usage(chosen.asset_id)
-                logger.info(f"[Review] 替换素材: {rejected_asset_id} → {chosen.asset_id}")
+                logger.info(
+                    f"[Review] 替换素材: {rejected_asset_id} → {chosen.asset_id}"
+                )
             else:
                 clips[payload.clip_index]["method"] = "rejected_no_alternative"
-                logger.warning(f"[Review] 无替代素材: sentence={sentence[:30]}..., category={category}")
+                logger.warning(
+                    f"[Review] 无替代素材: sentence={sentence[:30]}..., category={category}"
+                )
         else:
             clips[payload.clip_index]["method"] = "rejected_unknown_category"
             logger.warning(f"[Review] 未知分类: {category}")
 
-        clips_path.write_text(json.dumps(clips, ensure_ascii=False, indent=2), encoding="utf-8")
+        clips_path.write_text(
+            json.dumps(clips, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
 
     except Exception as e:
         logger.error(f"[Review] 替换素材失败: {e}")
         clips[payload.clip_index]["method"] = "rejected_error"
-        clips_path.write_text(json.dumps(clips, ensure_ascii=False, indent=2), encoding="utf-8")
+        clips_path.write_text(
+            json.dumps(clips, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
 
     return {
         "status": "clip_rejected",

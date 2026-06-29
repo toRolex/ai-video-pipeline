@@ -65,7 +65,9 @@ class TestKeywordScore:
         assert score == 0.0
 
     def test_multiple_tag_matches_score_higher(self) -> None:
-        seg = self._make_segment("荔枝菌需要充分烹熟。", tags=["荔枝菌", "安全", "烹饪"])
+        seg = self._make_segment(
+            "荔枝菌需要充分烹熟。", tags=["荔枝菌", "安全", "烹饪"]
+        )
         score_multi = keyword_score("荔枝菌 安全", seg)
         score_single = keyword_score("荔枝菌", seg)
         assert score_multi >= score_single

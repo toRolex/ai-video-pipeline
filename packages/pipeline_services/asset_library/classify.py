@@ -19,7 +19,7 @@ CATEGORY_NAMES = [c.value for c in Category]
 CLASSIFY_PROMPT = (
     "你是视频素材分类助手。根据文案句子的语义，从以下分类中选择最匹配的一个：\n"
     + ", ".join(CATEGORY_NAMES)
-    + "\n\n严格只返回一个JSON对象，不要有任何其他文字：{\"category\": \"分类名\"}"
+    + '\n\n严格只返回一个JSON对象，不要有任何其他文字：{"category": "分类名"}'
 )
 
 
@@ -50,7 +50,7 @@ def create_classify_fn(
             "max_tokens": 200,
         }
         data = json.dumps(payload).encode("utf-8")
-        
+
         for attempt in range(3):
             req = urllib.request.Request(
                 api_url,
@@ -65,27 +65,38 @@ def create_classify_fn(
                     body = json.loads(resp.read().decode("utf-8"))
                 content = body["choices"][0]["message"]["content"]
                 logger.debug("LLM 返回内容 (attempt %d): %s", attempt + 1, content)
-                
+
                 import re
-                
+
                 json_match = re.search(r'\{[^}]*"category"\s*:\s*"[^"]*"\s*\}', content)
                 if not json_match:
-                    json_match = re.search(r'\{[^}]+\}', content)
-                
+                    json_match = re.search(r"\{[^}]+\}", content)
+
                 if json_match:
                     try:
                         parsed = json.loads(json_match.group())
                         cat_name = parsed.get("category", "")
                         if cat_name in CATEGORY_NAMES:
                             return cat_name
-                        logger.warning("LLM 返回无效分类名 (attempt %d): %s", attempt + 1, cat_name)
+                        logger.warning(
+                            "LLM 返回无效分类名 (attempt %d): %s", attempt + 1, cat_name
+                        )
                     except json.JSONDecodeError as e:
-                        logger.warning("JSON 解析失败 (attempt %d): %s, 原始内容: %s", attempt + 1, e, json_match.group())
+                        logger.warning(
+                            "JSON 解析失败 (attempt %d): %s, 原始内容: %s",
+                            attempt + 1,
+                            e,
+                            json_match.group(),
+                        )
                 else:
-                    logger.warning("LLM 返回中未找到 JSON (attempt %d): %s", attempt + 1, content[:200])
+                    logger.warning(
+                        "LLM 返回中未找到 JSON (attempt %d): %s",
+                        attempt + 1,
+                        content[:200],
+                    )
             except Exception as exc:
                 logger.warning("LLM 句子分类失败 (attempt %d): %s", attempt + 1, exc)
-        
+
         return None
 
     return classify_sentence

@@ -42,8 +42,10 @@ def test_ffmpeg_path_brew_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
     def _brew_output(*args: object, **kwargs: object) -> str:
         return "/opt/homebrew/opt/ffmpeg"
 
-    with mock.patch.object(Path, "exists", autospec=True) as mock_exists, \
-         mock.patch.object(subprocess, "check_output", side_effect=_brew_output):
+    with (
+        mock.patch.object(Path, "exists", autospec=True) as mock_exists,
+        mock.patch.object(subprocess, "check_output", side_effect=_brew_output),
+    ):
         mock_exists.side_effect = _exists_side_effect
         result = adapter.ffmpeg_path()
 
@@ -57,8 +59,10 @@ def test_ffmpeg_path_tools_bin(monkeypatch: pytest.MonkeyPatch) -> None:
     def _exists_side_effect(self: Path) -> bool:
         return "ffmpeg" in str(self) and "tools" in str(self) and "bin" in str(self)
 
-    with mock.patch.object(Path, "exists", autospec=True) as mock_exists, \
-         mock.patch.object(subprocess, "check_output", side_effect=FileNotFoundError):
+    with (
+        mock.patch.object(Path, "exists", autospec=True) as mock_exists,
+        mock.patch.object(subprocess, "check_output", side_effect=FileNotFoundError),
+    ):
         mock_exists.side_effect = _exists_side_effect
         result = adapter.ffmpeg_path()
 
@@ -69,9 +73,11 @@ def test_ffmpeg_path_shutil_which(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("FFMPEG_PATH", raising=False)
     adapter = MacLocalRuntimeAdapter()
 
-    with mock.patch.object(Path, "exists", return_value=False), \
-         mock.patch.object(subprocess, "check_output", side_effect=FileNotFoundError), \
-         mock.patch("shutil.which", return_value="/usr/local/bin/ffmpeg"):
+    with (
+        mock.patch.object(Path, "exists", return_value=False),
+        mock.patch.object(subprocess, "check_output", side_effect=FileNotFoundError),
+        mock.patch("shutil.which", return_value="/usr/local/bin/ffmpeg"),
+    ):
         result = adapter.ffmpeg_path()
 
     assert result == Path("/usr/local/bin/ffmpeg")
@@ -81,9 +87,11 @@ def test_ffmpeg_path_all_missing_raises(monkeypatch: pytest.MonkeyPatch) -> None
     monkeypatch.delenv("FFMPEG_PATH", raising=False)
     adapter = MacLocalRuntimeAdapter()
 
-    with mock.patch.object(Path, "exists", return_value=False), \
-         mock.patch.object(subprocess, "check_output", side_effect=FileNotFoundError), \
-         mock.patch("shutil.which", return_value=None):
+    with (
+        mock.patch.object(Path, "exists", return_value=False),
+        mock.patch.object(subprocess, "check_output", side_effect=FileNotFoundError),
+        mock.patch("shutil.which", return_value=None),
+    ):
         with pytest.raises(FileNotFoundError, match="ffmpeg"):
             adapter.ffmpeg_path()
 

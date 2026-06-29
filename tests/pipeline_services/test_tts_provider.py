@@ -41,16 +41,10 @@ class TestMiMoTTSProvider:
 
     def test_build_preset_request(self):
         provider = MiMoTTSProvider(api_key="test_key")
-        config = TTSConfig(
-            model="mimo-v2.5-tts",
-            voice="Mia",
-            style_prompt="活泼热情"
-        )
+        config = TTSConfig(model="mimo-v2.5-tts", voice="Mia", style_prompt="活泼热情")
 
         request = provider._build_request(
-            text="测试文本",
-            config=config,
-            voice_id="Mia"
+            text="测试文本", config=config, voice_id="Mia"
         )
 
         assert request["model"] == "mimo-v2.5-tts"
@@ -64,13 +58,10 @@ class TestMiMoTTSProvider:
         provider = MiMoTTSProvider(api_key="test_key")
         config = TTSConfig(
             model="mimo-v2.5-tts-voicedesign",
-            voice_design_prompt="年轻女性，声音甜美清澈"
+            voice_design_prompt="年轻女性，声音甜美清澈",
         )
 
-        request = provider._build_request(
-            text="测试文本",
-            config=config
-        )
+        request = provider._build_request(text="测试文本", config=config)
 
         assert request["model"] == "mimo-v2.5-tts-voicedesign"
         assert "voice" not in request.get("audio", {})
@@ -79,7 +70,9 @@ class TestMiMoTTSProvider:
 
 class TestMiMoTTSProviderSynthesize:
     def _make_provider(self):
-        return MiMoTTSProvider(api_key="test-key", base_url="https://api.xiaomimimo.com/v1")
+        return MiMoTTSProvider(
+            api_key="test-key", base_url="https://api.xiaomimimo.com/v1"
+        )
 
     def _mock_config(self, **overrides):
         config = MagicMock()

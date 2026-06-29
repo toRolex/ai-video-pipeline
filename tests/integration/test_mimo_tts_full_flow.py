@@ -5,6 +5,7 @@
 - mimo-v2.5-tts-voiceclone 音色克隆
 - mimo-v2-tts 预置音色
 """
+
 import base64
 
 import pytest
@@ -30,17 +31,21 @@ def provider():
 # v2.5 预置音色
 # ---------------------------------------------------------------------------
 
+
 class TestV25Preset:
     """mimo-v2.5-tts 预置音色完整流程"""
 
     def test_api_save_and_read_config(self, client):
         """1. 通过 API 保存配置，再读回验证"""
-        resp = client.put("/api/tts/config", json={
-            "model": "mimo-v2.5-tts",
-            "voice": "Mia",
-            "audio_format": "wav",
-            "randomize_voice": False,
-        })
+        resp = client.put(
+            "/api/tts/config",
+            json={
+                "model": "mimo-v2.5-tts",
+                "voice": "Mia",
+                "audio_format": "wav",
+                "randomize_voice": False,
+            },
+        )
         assert resp.status_code == 200
         assert resp.json()["success"] is True
 
@@ -95,6 +100,7 @@ class TestV25Preset:
 # ---------------------------------------------------------------------------
 # v2.5 voiceclone 音色克隆
 # ---------------------------------------------------------------------------
+
 
 class TestV25VoiceClone:
     """mimo-v2.5-tts-voiceclone 音色克隆完整流程"""
@@ -175,17 +181,21 @@ class TestV25VoiceClone:
 # v2 预置音色
 # ---------------------------------------------------------------------------
 
+
 class TestV2Preset:
     """mimo-v2-tts 预置音色完整流程（已迁移至 qwen）"""
 
     def test_api_save_and_read_config(self, client):
         """1. mimo-v2-tts 保存后自动迁移为 qwen3-tts-flash"""
-        resp = client.put("/api/tts/config", json={
-            "model": "mimo-v2-tts",
-            "voice": "default_zh",
-            "audio_format": "wav",
-            "randomize_voice": False,
-        })
+        resp = client.put(
+            "/api/tts/config",
+            json={
+                "model": "mimo-v2-tts",
+                "voice": "default_zh",
+                "audio_format": "wav",
+                "randomize_voice": False,
+            },
+        )
         assert resp.status_code == 200
 
         resp = client.get("/api/tts/config")
@@ -214,6 +224,7 @@ class TestV2Preset:
 # ---------------------------------------------------------------------------
 # 跨模型通用验证
 # ---------------------------------------------------------------------------
+
 
 class TestCrossModel:
     """跨模型通用行为验证"""

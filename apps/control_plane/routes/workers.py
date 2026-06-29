@@ -53,7 +53,9 @@ def upload_artifacts(task_id: str, payload: dict[str, object]) -> dict[str, obje
 
 
 @router.post("/tasks/{task_id}/report")
-def report_task(task_id: str, payload: WorkerReport, request: Request) -> dict[str, object]:
+def report_task(
+    task_id: str, payload: WorkerReport, request: Request
+) -> dict[str, object]:
     current = request.app.state.dispatcher.current_attempts.get(task_id)
     outcome = choose_report_outcome(current=current, report=payload)
     accepted = outcome == "accept"
@@ -74,11 +76,13 @@ def report_task(task_id: str, payload: WorkerReport, request: Request) -> dict[s
                 if manifest and "files" in manifest:
                     for f in manifest["files"]:
                         kind = _artifact_kind(f["relative_path"])
-                        artifacts.append(ArtifactPointer(
-                            kind=kind,
-                            relative_path=f["relative_path"],
-                            size_bytes=f.get("size_bytes", 0),
-                        ))
+                        artifacts.append(
+                            ArtifactPointer(
+                                kind=kind,
+                                relative_path=f["relative_path"],
+                                size_bytes=f.get("size_bytes", 0),
+                            )
+                        )
 
                 if current_phase not in REVIEW_PHASES:
                     try:
@@ -87,26 +91,33 @@ def report_task(task_id: str, payload: WorkerReport, request: Request) -> dict[s
                         next_p = "completed"
 
                     if next_p in REVIEW_PHASES:
-                        record = record.model_copy(update={
-                            "phase": next_p,
-                            "review_status": "pending",
-                            "artifacts": artifacts,
-                        })
+                        record = record.model_copy(
+                            update={
+                                "phase": next_p,
+                                "review_status": "pending",
+                                "artifacts": artifacts,
+                            }
+                        )
                     else:
-                        record = record.model_copy(update={
-                            "phase": next_p,
-                            "artifacts": artifacts,
-                        })
+                        record = record.model_copy(
+                            update={
+                                "phase": next_p,
+                                "artifacts": artifacts,
+                            }
+                        )
                 else:
                     record = record.model_copy(update={"artifacts": artifacts})
 
                 repo.save_job(project_id, record)
-                repo.append_review_event(project_id, {
-                    "job_id": job_id,
-                    "event": "worker_report",
-                    "from_phase": current_phase,
-                    "to_phase": record.phase,
-                })
+                repo.append_review_event(
+                    project_id,
+                    {
+                        "job_id": job_id,
+                        "event": "worker_report",
+                        "from_phase": current_phase,
+                        "to_phase": record.phase,
+                    },
+                )
             except Exception:
                 pass
 

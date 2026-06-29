@@ -60,14 +60,21 @@ class ScriptGenerator:
         best_quality: dict[str, Any] = {}
         for attempt in range(1, MAX_GENERATION_ATTEMPTS + 1):
             first_half = self._generate_half(
-                build_first_half_messages(product, brand, scene, material, custom_prompt)
+                build_first_half_messages(
+                    product, brand, scene, material, custom_prompt
+                )
             )
             first_len = compact_len(first_half)
 
             second_half = self._generate_half(
                 build_second_half_messages(
-                    product, brand, scene, material,
-                    first_half, first_len, custom_prompt,
+                    product,
+                    brand,
+                    scene,
+                    material,
+                    first_half,
+                    first_len,
+                    custom_prompt,
                 )
             )
 
@@ -75,12 +82,16 @@ class ScriptGenerator:
             quality = validate_script(full_text, product, brand)
 
             if not quality["ok"]:
-                best_text, best_quality = self._track_shorter(full_text, quality, best_text, best_quality)
+                best_text, best_quality = self._track_shorter(
+                    full_text, quality, best_text, best_quality
+                )
                 continue
 
             if language == "cantonese":
                 cantonese_text = self.to_cantonese(full_text, product, brand)
-                cantonese_quality = validate_cantonese_script(cantonese_text, product, brand)
+                cantonese_quality = validate_cantonese_script(
+                    cantonese_text, product, brand
+                )
                 if cantonese_quality["ok"]:
                     return ScriptResult(
                         full_text=cantonese_text,
@@ -89,7 +100,9 @@ class ScriptGenerator:
                         attempts=attempt,
                         quality=cantonese_quality,
                     )
-                best_text, best_quality = self._track_shorter(cantonese_text, cantonese_quality, best_text, best_quality)
+                best_text, best_quality = self._track_shorter(
+                    cantonese_text, cantonese_quality, best_text, best_quality
+                )
             else:
                 return ScriptResult(
                     full_text=full_text,
@@ -99,7 +112,9 @@ class ScriptGenerator:
                     quality=quality,
                 )
 
-            best_text, best_quality = self._track_shorter(full_text, quality, best_text, best_quality)
+            best_text, best_quality = self._track_shorter(
+                full_text, quality, best_text, best_quality
+            )
 
         return ScriptResult(
             full_text=best_text,
@@ -115,7 +130,9 @@ class ScriptGenerator:
         raw = self._call_llm(messages)
         return raw.strip()
 
-    def generate_cover_title(self, script_text: str, product: str, brand: str) -> dict[str, Any]:
+    def generate_cover_title(
+        self, script_text: str, product: str, brand: str
+    ) -> dict[str, Any]:
         """根据脚本生成封面标题和高亮关键词。标题限制 10-15 字。"""
         messages = build_cover_title_messages(script_text, product, brand)
         raw = self._call_llm(messages)
@@ -126,7 +143,9 @@ class ScriptGenerator:
                 title = title[:15]
             highlight_words = payload.get("highlight_words", [])
             if isinstance(highlight_words, str):
-                highlight_words = [w.strip() for w in highlight_words.split(",") if w.strip()]
+                highlight_words = [
+                    w.strip() for w in highlight_words.split(",") if w.strip()
+                ]
             return {"text": title, "highlight_words": highlight_words}
         except (ValueError, json.JSONDecodeError):
             return {"text": product, "highlight_words": [product]}
@@ -168,7 +187,9 @@ class ScriptGenerator:
         return sentences
 
     @staticmethod
-    def _mock_result(product: str, brand: str, language: str = "mandarin") -> ScriptResult:
+    def _mock_result(
+        product: str, brand: str, language: str = "mandarin"
+    ) -> ScriptResult:
         if language == "cantonese":
             first = f"雲南深山裡邊藏住一種寶貝，就係鮮嫩嘅{product}，採摘之後即刻送到你手中，今日教大家點樣煮先好食"
             second = f"鑊度落油燒熱落菌子，徹底煮熟先至可以安心享用，{brand}嘅品質值得信賴，快啲落單試下啦"

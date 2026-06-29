@@ -1,4 +1,5 @@
 """后台索引任务管理器"""
+
 from __future__ import annotations
 
 import asyncio

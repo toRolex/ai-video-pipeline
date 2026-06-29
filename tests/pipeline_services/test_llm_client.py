@@ -23,9 +23,7 @@ class TestLLMClient:
     def test_chat_sends_correct_payload(self, mock_requests):
         mock_resp = MagicMock()
         mock_resp.status_code = 200
-        mock_resp.json.return_value = {
-            "choices": [{"message": {"content": "hello"}}]
-        }
+        mock_resp.json.return_value = {"choices": [{"message": {"content": "hello"}}]}
         mock_resp.raise_for_status = MagicMock()
         mock_requests.post.return_value = mock_resp
 
@@ -79,9 +77,7 @@ class TestLLMClient:
     def test_chat_raises_on_empty_content(self, mock_requests):
         mock_resp = MagicMock()
         mock_resp.status_code = 200
-        mock_resp.json.return_value = {
-            "choices": [{"message": {"content": ""}}]
-        }
+        mock_resp.json.return_value = {"choices": [{"message": {"content": ""}}]}
         mock_resp.raise_for_status = MagicMock()
         mock_requests.post.return_value = mock_resp
 
@@ -93,9 +89,7 @@ class TestLLMClient:
     def test_chat_passes_extra_params(self, mock_requests):
         mock_resp = MagicMock()
         mock_resp.status_code = 200
-        mock_resp.json.return_value = {
-            "choices": [{"message": {"content": "ok"}}]
-        }
+        mock_resp.json.return_value = {"choices": [{"message": {"content": "ok"}}]}
         mock_resp.raise_for_status = MagicMock()
         mock_requests.post.return_value = mock_resp
 
@@ -106,10 +100,9 @@ class TestLLMClient:
             max_tokens=100,
         )
 
-        body = (
-            mock_requests.post.call_args.kwargs.get("json")
-            or mock_requests.post.call_args[1].get("json")
-        )
+        body = mock_requests.post.call_args.kwargs.get(
+            "json"
+        ) or mock_requests.post.call_args[1].get("json")
         assert body["temperature"] == 0.5
         assert body["max_tokens"] == 100
 
@@ -117,9 +110,7 @@ class TestLLMClient:
     def test_chat_constructs_correct_url(self, mock_requests):
         mock_resp = MagicMock()
         mock_resp.status_code = 200
-        mock_resp.json.return_value = {
-            "choices": [{"message": {"content": "ok"}}]
-        }
+        mock_resp.json.return_value = {"choices": [{"message": {"content": "ok"}}]}
         mock_resp.raise_for_status = MagicMock()
         mock_requests.post.return_value = mock_resp
 

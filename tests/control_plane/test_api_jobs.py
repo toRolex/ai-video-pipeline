@@ -14,19 +14,32 @@ def _make_client(tmp_path: Path):
 
 # ── 单个 create_job ──────────────────────────────────────────────
 
+
 def test_create_job_persists_skip_subtitle(tmp_path: Path) -> None:
     """单次 create_job 将 skip_subtitle=True 写入 JobRecord。"""
     client = _make_client(tmp_path)
-    resp = client.post("/api/projects/prj_001/jobs", json={
-        "product": "test", "platforms": ["douyin"],
-        "skip_subtitle": True,
-    })
+    resp = client.post(
+        "/api/projects/prj_001/jobs",
+        json={
+            "product": "test",
+            "platforms": ["douyin"],
+            "skip_subtitle": True,
+        },
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert data["skip_subtitle"] is True
 
     # 从磁盘直接读 JobRecord 验证持久化
-    job_path = tmp_path / "workspace" / "projects" / "prj_001" / "control" / "jobs" / f"{data['job_id']}.json"
+    job_path = (
+        tmp_path
+        / "workspace"
+        / "projects"
+        / "prj_001"
+        / "control"
+        / "jobs"
+        / f"{data['job_id']}.json"
+    )
     raw = json.loads(job_path.read_text(encoding="utf-8"))
     assert raw["skip_subtitle"] is True
 
@@ -34,22 +47,25 @@ def test_create_job_persists_skip_subtitle(tmp_path: Path) -> None:
 def test_create_job_persists_language_and_cover_title(tmp_path: Path) -> None:
     """单次 create_job 将 language 与 cover_title 写入 JobRecord。"""
     client = _make_client(tmp_path)
-    resp = client.post("/api/projects/prj_001/jobs", json={
-        "product": "test",
-        "platforms": ["douyin"],
-        "language": "cantonese",
-        "cover_title": {
-            "text": "鲜嫩荔枝菌",
-            "highlight_words": ["荔枝菌"],
-            "style": {
-                "primary_color": "#FFFF00",
-                "outline_color": "#000000",
-                "highlight_color": "#FF0000",
-                "outline_width": 3,
-                "position": "top",
+    resp = client.post(
+        "/api/projects/prj_001/jobs",
+        json={
+            "product": "test",
+            "platforms": ["douyin"],
+            "language": "cantonese",
+            "cover_title": {
+                "text": "鲜嫩荔枝菌",
+                "highlight_words": ["荔枝菌"],
+                "style": {
+                    "primary_color": "#FFFF00",
+                    "outline_color": "#000000",
+                    "highlight_color": "#FF0000",
+                    "outline_width": 3,
+                    "position": "top",
+                },
             },
         },
-    })
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert data["language"] == "cantonese"
@@ -57,7 +73,15 @@ def test_create_job_persists_language_and_cover_title(tmp_path: Path) -> None:
     assert data["cover_title"]["highlight_words"] == ["荔枝菌"]
     assert data["cover_title"]["style"]["position"] == "top"
 
-    job_path = tmp_path / "workspace" / "projects" / "prj_001" / "control" / "jobs" / f"{data['job_id']}.json"
+    job_path = (
+        tmp_path
+        / "workspace"
+        / "projects"
+        / "prj_001"
+        / "control"
+        / "jobs"
+        / f"{data['job_id']}.json"
+    )
     raw = json.loads(job_path.read_text(encoding="utf-8"))
     assert raw["language"] == "cantonese"
     assert raw["cover_title"]["text"] == "鲜嫩荔枝菌"
@@ -67,21 +91,27 @@ def test_create_job_persists_language_and_cover_title(tmp_path: Path) -> None:
 def test_batch_create_jobs_persists_cover_title_and_language(tmp_path: Path) -> None:
     """批量创建时 per-job cover_title 与 language 落盘。"""
     client = _make_client(tmp_path)
-    resp = client.post("/api/projects/prj_001/jobs/batch", json={
-        "product": "荔枝菌",
-        "platforms": ["douyin"],
-        "jobs": [
-            {
-                "name": "粤语封面",
-                "language": "cantonese",
-                "cover_title": {"text": "鮮嫩荔枝菌", "highlight_words": ["鮮嫩"]},
-            },
-            {
-                "name": "普通话封面",
-                "cover_title": {"text": "鲜嫩荔枝菌", "highlight_words": ["荔枝菌"]},
-            },
-        ],
-    })
+    resp = client.post(
+        "/api/projects/prj_001/jobs/batch",
+        json={
+            "product": "荔枝菌",
+            "platforms": ["douyin"],
+            "jobs": [
+                {
+                    "name": "粤语封面",
+                    "language": "cantonese",
+                    "cover_title": {"text": "鮮嫩荔枝菌", "highlight_words": ["鮮嫩"]},
+                },
+                {
+                    "name": "普通话封面",
+                    "cover_title": {
+                        "text": "鲜嫩荔枝菌",
+                        "highlight_words": ["荔枝菌"],
+                    },
+                },
+            ],
+        },
+    )
     assert resp.status_code == 200
     results = resp.json()["results"]
     assert len(results) == 2
@@ -91,7 +121,15 @@ def test_batch_create_jobs_persists_cover_title_and_language(tmp_path: Path) -> 
     assert results[1]["cover_title"]["text"] == "鲜嫩荔枝菌"
 
     for r in results:
-        job_path = tmp_path / "workspace" / "projects" / "prj_001" / "control" / "jobs" / f"{r['job_id']}.json"
+        job_path = (
+            tmp_path
+            / "workspace"
+            / "projects"
+            / "prj_001"
+            / "control"
+            / "jobs"
+            / f"{r['job_id']}.json"
+        )
         raw = json.loads(job_path.read_text(encoding="utf-8"))
         assert raw["cover_title"]["text"] == r["cover_title"]["text"]
         assert raw["language"] == r["language"]
@@ -100,15 +138,27 @@ def test_batch_create_jobs_persists_cover_title_and_language(tmp_path: Path) -> 
 def test_create_job_persists_auto_approve(tmp_path: Path) -> None:
     """单次 create_job 将 auto_approve=True 写入 JobRecord。"""
     client = _make_client(tmp_path)
-    resp = client.post("/api/projects/prj_001/jobs", json={
-        "product": "test", "platforms": ["douyin"],
-        "auto_approve": True,
-    })
+    resp = client.post(
+        "/api/projects/prj_001/jobs",
+        json={
+            "product": "test",
+            "platforms": ["douyin"],
+            "auto_approve": True,
+        },
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert data["auto_approve"] is True
 
-    job_path = tmp_path / "workspace" / "projects" / "prj_001" / "control" / "jobs" / f"{data['job_id']}.json"
+    job_path = (
+        tmp_path
+        / "workspace"
+        / "projects"
+        / "prj_001"
+        / "control"
+        / "jobs"
+        / f"{data['job_id']}.json"
+    )
     raw = json.loads(job_path.read_text(encoding="utf-8"))
     assert raw["auto_approve"] is True
 
@@ -116,26 +166,34 @@ def test_create_job_persists_auto_approve(tmp_path: Path) -> None:
 def test_create_job_defaults_skip_subtitle_false(tmp_path: Path) -> None:
     """未传 skip_subtitle 时默认值为 False。"""
     client = _make_client(tmp_path)
-    resp = client.post("/api/projects/prj_001/jobs", json={
-        "product": "test", "platforms": ["douyin"],
-    })
+    resp = client.post(
+        "/api/projects/prj_001/jobs",
+        json={
+            "product": "test",
+            "platforms": ["douyin"],
+        },
+    )
     assert resp.status_code == 200
     assert resp.json()["skip_subtitle"] is False
 
 
 # ── 批量创建接口 ─────────────────────────────────────────────────
 
+
 def test_batch_create_jobs_basic(tmp_path: Path) -> None:
     """批量创建 2 个 job，返回正确的 display_index。"""
     client = _make_client(tmp_path)
-    resp = client.post("/api/projects/prj_001/jobs/batch", json={
-        "product": "荔枝菌",
-        "platforms": ["douyin", "xiaohongshu"],
-        "jobs": [
-            {"name": "第一条", "manual_script": "这是第一条文案"},
-            {"name": "第二条", "manual_script": "这是第二条文案"},
-        ],
-    })
+    resp = client.post(
+        "/api/projects/prj_001/jobs/batch",
+        json={
+            "product": "荔枝菌",
+            "platforms": ["douyin", "xiaohongshu"],
+            "jobs": [
+                {"name": "第一条", "manual_script": "这是第一条文案"},
+                {"name": "第二条", "manual_script": "这是第二条文案"},
+            ],
+        },
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert data["product"] == "荔枝菌"
@@ -161,21 +219,32 @@ def test_batch_create_jobs_display_index_offset(tmp_path: Path) -> None:
     """批量创建时 display_index 从已有 job 数 + 1 开始。"""
     client = _make_client(tmp_path)
     # 先创建 2 个 job
-    client.post("/api/projects/prj_001/jobs", json={
-        "product": "test", "platforms": ["douyin"],
-    })
-    client.post("/api/projects/prj_001/jobs", json={
-        "product": "test", "platforms": ["douyin"],
-    })
+    client.post(
+        "/api/projects/prj_001/jobs",
+        json={
+            "product": "test",
+            "platforms": ["douyin"],
+        },
+    )
+    client.post(
+        "/api/projects/prj_001/jobs",
+        json={
+            "product": "test",
+            "platforms": ["douyin"],
+        },
+    )
 
-    resp = client.post("/api/projects/prj_001/jobs/batch", json={
-        "product": "荔枝菌",
-        "platforms": ["douyin"],
-        "jobs": [
-            {"name": "批量1"},
-            {"name": "批量2"},
-        ],
-    })
+    resp = client.post(
+        "/api/projects/prj_001/jobs/batch",
+        json={
+            "product": "荔枝菌",
+            "platforms": ["douyin"],
+            "jobs": [
+                {"name": "批量1"},
+                {"name": "批量2"},
+            ],
+        },
+    )
     assert resp.status_code == 200
     results = resp.json()["results"]
     assert results[0]["display_index"] == "003"
@@ -185,14 +254,17 @@ def test_batch_create_jobs_display_index_offset(tmp_path: Path) -> None:
 def test_batch_create_jobs_per_job_skip_subtitle(tmp_path: Path) -> None:
     """批量请求中 per-job 的 skip_subtitle 能持久化到磁盘。"""
     client = _make_client(tmp_path)
-    resp = client.post("/api/projects/prj_001/jobs/batch", json={
-        "product": "荔枝菌",
-        "platforms": ["douyin"],
-        "jobs": [
-            {"name": "无字幕", "manual_script": "", "skip_subtitle": True},
-            {"name": "有字幕", "manual_script": "", "skip_subtitle": False},
-        ],
-    })
+    resp = client.post(
+        "/api/projects/prj_001/jobs/batch",
+        json={
+            "product": "荔枝菌",
+            "platforms": ["douyin"],
+            "jobs": [
+                {"name": "无字幕", "manual_script": "", "skip_subtitle": True},
+                {"name": "有字幕", "manual_script": "", "skip_subtitle": False},
+            ],
+        },
+    )
     assert resp.status_code == 200
     results = resp.json()["results"]
     assert results[0]["skip_subtitle"] is True
@@ -200,7 +272,15 @@ def test_batch_create_jobs_per_job_skip_subtitle(tmp_path: Path) -> None:
 
     # 磁盘验证
     for r in results:
-        job_path = tmp_path / "workspace" / "projects" / "prj_001" / "control" / "jobs" / f"{r['job_id']}.json"
+        job_path = (
+            tmp_path
+            / "workspace"
+            / "projects"
+            / "prj_001"
+            / "control"
+            / "jobs"
+            / f"{r['job_id']}.json"
+        )
         raw = json.loads(job_path.read_text(encoding="utf-8"))
         if r["name"] == "无字幕":
             assert raw["skip_subtitle"] is True
@@ -211,21 +291,32 @@ def test_batch_create_jobs_per_job_skip_subtitle(tmp_path: Path) -> None:
 def test_batch_create_jobs_top_level_auto_approve(tmp_path: Path) -> None:
     """批量请求顶层 auto_approve=True 对所有 job 生效并落盘。"""
     client = _make_client(tmp_path)
-    resp = client.post("/api/projects/prj_001/jobs/batch", json={
-        "product": "荔枝菌",
-        "platforms": ["douyin"],
-        "auto_approve": True,
-        "jobs": [
-            {"name": "自动审核1"},
-            {"name": "自动审核2"},
-        ],
-    })
+    resp = client.post(
+        "/api/projects/prj_001/jobs/batch",
+        json={
+            "product": "荔枝菌",
+            "platforms": ["douyin"],
+            "auto_approve": True,
+            "jobs": [
+                {"name": "自动审核1"},
+                {"name": "自动审核2"},
+            ],
+        },
+    )
     assert resp.status_code == 200
     results = resp.json()["results"]
     assert len(results) == 2
     for r in results:
         assert r["auto_approve"] is True
-        job_path = tmp_path / "workspace" / "projects" / "prj_001" / "control" / "jobs" / f"{r['job_id']}.json"
+        job_path = (
+            tmp_path
+            / "workspace"
+            / "projects"
+            / "prj_001"
+            / "control"
+            / "jobs"
+            / f"{r['job_id']}.json"
+        )
         raw = json.loads(job_path.read_text(encoding="utf-8"))
         assert raw["auto_approve"] is True
 
@@ -233,11 +324,14 @@ def test_batch_create_jobs_top_level_auto_approve(tmp_path: Path) -> None:
 def test_batch_create_jobs_empty_list(tmp_path: Path) -> None:
     """空 jobs 列表返回空 results，不算错误。"""
     client = _make_client(tmp_path)
-    resp = client.post("/api/projects/prj_001/jobs/batch", json={
-        "product": "荔枝菌",
-        "platforms": ["douyin"],
-        "jobs": [],
-    })
+    resp = client.post(
+        "/api/projects/prj_001/jobs/batch",
+        json={
+            "product": "荔枝菌",
+            "platforms": ["douyin"],
+            "jobs": [],
+        },
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert data["results"] == []
@@ -245,17 +339,30 @@ def test_batch_create_jobs_empty_list(tmp_path: Path) -> None:
 
 # ── audio_source 字段 ────────────────────────────────────────────
 
+
 def test_create_job_audio_source_tts(tmp_path: Path) -> None:
     """单次 create_job 默认 audio_source='tts' 写入 JobRecord。"""
     client = _make_client(tmp_path)
-    resp = client.post("/api/projects/prj_001/jobs", json={
-        "product": "test", "platforms": ["douyin"],
-    })
+    resp = client.post(
+        "/api/projects/prj_001/jobs",
+        json={
+            "product": "test",
+            "platforms": ["douyin"],
+        },
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert data["audio_source"] == "tts"
 
-    job_path = tmp_path / "workspace" / "projects" / "prj_001" / "control" / "jobs" / f"{data['job_id']}.json"
+    job_path = (
+        tmp_path
+        / "workspace"
+        / "projects"
+        / "prj_001"
+        / "control"
+        / "jobs"
+        / f"{data['job_id']}.json"
+    )
     raw = json.loads(job_path.read_text(encoding="utf-8"))
     assert raw["audio_source"] == "tts"
 
@@ -263,15 +370,27 @@ def test_create_job_audio_source_tts(tmp_path: Path) -> None:
 def test_create_job_audio_source_upload(tmp_path: Path) -> None:
     """单次 create_job 传入 audio_source='upload' 持久化到磁盘。"""
     client = _make_client(tmp_path)
-    resp = client.post("/api/projects/prj_001/jobs", json={
-        "product": "test", "platforms": ["douyin"],
-        "audio_source": "upload",
-    })
+    resp = client.post(
+        "/api/projects/prj_001/jobs",
+        json={
+            "product": "test",
+            "platforms": ["douyin"],
+            "audio_source": "upload",
+        },
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert data["audio_source"] == "upload"
 
-    job_path = tmp_path / "workspace" / "projects" / "prj_001" / "control" / "jobs" / f"{data['job_id']}.json"
+    job_path = (
+        tmp_path
+        / "workspace"
+        / "projects"
+        / "prj_001"
+        / "control"
+        / "jobs"
+        / f"{data['job_id']}.json"
+    )
     raw = json.loads(job_path.read_text(encoding="utf-8"))
     assert raw["audio_source"] == "upload"
 
@@ -279,15 +398,27 @@ def test_create_job_audio_source_upload(tmp_path: Path) -> None:
 def test_create_job_audio_source_library(tmp_path: Path) -> None:
     """单次 create_job 传入 audio_source='library' 持久化到磁盘。"""
     client = _make_client(tmp_path)
-    resp = client.post("/api/projects/prj_001/jobs", json={
-        "product": "test", "platforms": ["douyin"],
-        "audio_source": "library",
-    })
+    resp = client.post(
+        "/api/projects/prj_001/jobs",
+        json={
+            "product": "test",
+            "platforms": ["douyin"],
+            "audio_source": "library",
+        },
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert data["audio_source"] == "library"
 
-    job_path = tmp_path / "workspace" / "projects" / "prj_001" / "control" / "jobs" / f"{data['job_id']}.json"
+    job_path = (
+        tmp_path
+        / "workspace"
+        / "projects"
+        / "prj_001"
+        / "control"
+        / "jobs"
+        / f"{data['job_id']}.json"
+    )
     raw = json.loads(job_path.read_text(encoding="utf-8"))
     assert raw["audio_source"] == "library"
 
@@ -295,15 +426,18 @@ def test_create_job_audio_source_library(tmp_path: Path) -> None:
 def test_batch_create_jobs_audio_source(tmp_path: Path) -> None:
     """批量创建时 per-job 的 audio_source 持久化到磁盘。"""
     client = _make_client(tmp_path)
-    resp = client.post("/api/projects/prj_001/jobs/batch", json={
-        "product": "荔枝菌",
-        "platforms": ["douyin"],
-        "jobs": [
-            {"name": "TTS配音", "audio_source": "tts"},
-            {"name": "上传音频", "audio_source": "upload"},
-            {"name": "音乐库", "audio_source": "library"},
-        ],
-    })
+    resp = client.post(
+        "/api/projects/prj_001/jobs/batch",
+        json={
+            "product": "荔枝菌",
+            "platforms": ["douyin"],
+            "jobs": [
+                {"name": "TTS配音", "audio_source": "tts"},
+                {"name": "上传音频", "audio_source": "upload"},
+                {"name": "音乐库", "audio_source": "library"},
+            ],
+        },
+    )
     assert resp.status_code == 200
     results = resp.json()["results"]
     assert results[0]["audio_source"] == "tts"
@@ -311,12 +445,21 @@ def test_batch_create_jobs_audio_source(tmp_path: Path) -> None:
     assert results[2]["audio_source"] == "library"
 
     for r, expected in zip(results, ["tts", "upload", "library"]):
-        job_path = tmp_path / "workspace" / "projects" / "prj_001" / "control" / "jobs" / f"{r['job_id']}.json"
+        job_path = (
+            tmp_path
+            / "workspace"
+            / "projects"
+            / "prj_001"
+            / "control"
+            / "jobs"
+            / f"{r['job_id']}.json"
+        )
         raw = json.loads(job_path.read_text(encoding="utf-8"))
         assert raw["audio_source"] == expected
 
 
 # ── 音乐库 API ───────────────────────────────────────────────────
+
 
 def test_get_music_empty_library(tmp_path: Path) -> None:
     """音乐库为空时返回空列表。"""
@@ -356,12 +499,17 @@ def test_get_music_scans_audio_files(tmp_path: Path) -> None:
 
 # ── 原有 delete job 测试 ─────────────────────────────────────────
 
+
 def test_delete_job_success(tmp_path: Path) -> None:
     client = _make_client(tmp_path)
     # Create a job first
-    client.post("/api/projects/prj_001/jobs", json={
-        "product": "test", "platforms": ["douyin"],
-    })
+    client.post(
+        "/api/projects/prj_001/jobs",
+        json={
+            "product": "test",
+            "platforms": ["douyin"],
+        },
+    )
     # Find the job_id from the response
     jobs = client.get("/api/projects/prj_001").json().get("jobs", [])
     assert len(jobs) == 1

@@ -8,9 +8,9 @@ from packages.pipeline_services.asset_library.classify import create_classify_fn
 def _mock_llm_response(content: str):
     """创建模拟的 LLM API 响应。"""
     resp = Mock()
-    resp.read.return_value = json.dumps({
-        "choices": [{"message": {"content": content}}]
-    }).encode("utf-8")
+    resp.read.return_value = json.dumps(
+        {"choices": [{"message": {"content": content}}]}
+    ).encode("utf-8")
     return resp
 
 

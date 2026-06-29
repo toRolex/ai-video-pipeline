@@ -5,7 +5,11 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
-from packages.pipeline_services.asset_library.models import AssetRecord, AssetStatus, Category
+from packages.pipeline_services.asset_library.models import (
+    AssetRecord,
+    AssetStatus,
+    Category,
+)
 
 
 class AssetRepository:
@@ -42,9 +46,13 @@ class AssetRepository:
         conn.execute("CREATE INDEX IF NOT EXISTS idx_product ON assets(product)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_status ON assets(status)")
 
-        existing_sources = conn.execute("SELECT COUNT(*) FROM source_videos").fetchone()[0]
+        existing_sources = conn.execute(
+            "SELECT COUNT(*) FROM source_videos"
+        ).fetchone()[0]
         if existing_sources == 0:
-            rows = conn.execute("SELECT DISTINCT source_video FROM assets WHERE source_video != ''").fetchall()
+            rows = conn.execute(
+                "SELECT DISTINCT source_video FROM assets WHERE source_video != ''"
+            ).fetchall()
             now = datetime.now(timezone.utc).isoformat()
             for row in rows:
                 conn.execute(

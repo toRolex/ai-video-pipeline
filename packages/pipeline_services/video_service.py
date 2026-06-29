@@ -58,9 +58,15 @@ def _render_cover_title_png(
     """
     from PIL import Image, ImageDraw, ImageFont
 
-    primary = style.get("primary_color", DEFAULT_COVER_STYLE["primary_color"]).lstrip("#")
-    highlight = style.get("highlight_color", DEFAULT_COVER_STYLE["highlight_color"]).lstrip("#")
-    outline_color = style.get("outline_color", DEFAULT_COVER_STYLE["outline_color"]).lstrip("#")
+    primary = style.get("primary_color", DEFAULT_COVER_STYLE["primary_color"]).lstrip(
+        "#"
+    )
+    highlight = style.get(
+        "highlight_color", DEFAULT_COVER_STYLE["highlight_color"]
+    ).lstrip("#")
+    outline_color = style.get(
+        "outline_color", DEFAULT_COVER_STYLE["outline_color"]
+    ).lstrip("#")
     position = style.get("position", DEFAULT_COVER_STYLE["position"])
 
     max_w = int(video_width * 0.86)  # 86% of video width, 7% margin each side
@@ -126,7 +132,11 @@ def _render_cover_title_png(
     draw = ImageDraw.Draw(img)
 
     outline_w = int(style.get("outline_width", DEFAULT_COVER_STYLE["outline_width"]))
-    or_, og, ob = int(outline_color[0:2], 16), int(outline_color[2:4], 16), int(outline_color[4:6], 16)
+    or_, og, ob = (
+        int(outline_color[0:2], 16),
+        int(outline_color[2:4], 16),
+        int(outline_color[4:6], 16),
+    )
 
     # Measure each line
     line_heights: list[int] = []
@@ -162,7 +172,9 @@ def _render_cover_title_png(
                 for dy in range(-outline_w, outline_w + 1):
                     if dx == 0 and dy == 0:
                         continue
-                    draw.text((x + dx, y + dy), seg_text, font=font, fill=(or_, og, ob, 255))
+                    draw.text(
+                        (x + dx, y + dy), seg_text, font=font, fill=(or_, og, ob, 255)
+                    )
             draw.text((x, y), seg_text, font=font, fill=(r, g, b, 255))
             bbox = draw.textbbox((0, 0), seg_text, font=font)
             x += bbox[2] - bbox[0]
@@ -235,7 +247,9 @@ def _build_simple_video_filter(
     Cover title (PNG overlay) and subtitles can coexist (chained) in this path.
     """
     if cover_title_idx is not None:
-        overlay = f"[{base_idx}:v][{cover_title_idx}:v]overlay=0:0:enable='between(t,0,3)'[v]"
+        overlay = (
+            f"[{base_idx}:v][{cover_title_idx}:v]overlay=0:0:enable='between(t,0,3)'[v]"
+        )
         if has_subtitles:
             return (
                 f"{overlay};[v]subtitles='{srt_sub_escaped}':force_style='{subtitle_style}'[out]",
@@ -288,7 +302,9 @@ class VideoService:
 
         trim_params = _compute_trim_params(selected_clips, audio_duration)
 
-        target_width, target_height = get_video_size(Path(selected_clips[0]["file_path"]))
+        target_width, target_height = get_video_size(
+            Path(selected_clips[0]["file_path"])
+        )
 
         trimmed_paths: list[Path] = []
         ffmpeg = get_ffmpeg_path()
@@ -298,12 +314,18 @@ class VideoService:
             subprocess.run(
                 [
                     ffmpeg,
-                    "-ss", f"{tp['ss']:.3f}",
-                    "-t", f"{tp['duration']:.3f}",
-                    "-i", str(src),
-                    "-vf", f"scale={target_width}:{target_height},fps=30,setsar=1",
-                    "-c:v", "libx264",
-                    "-preset", "ultrafast",
+                    "-ss",
+                    f"{tp['ss']:.3f}",
+                    "-t",
+                    f"{tp['duration']:.3f}",
+                    "-i",
+                    str(src),
+                    "-vf",
+                    f"scale={target_width}:{target_height},fps=30,setsar=1",
+                    "-c:v",
+                    "libx264",
+                    "-preset",
+                    "ultrafast",
                     "-an",
                     "-y",
                     str(trimmed),
@@ -326,7 +348,9 @@ class VideoService:
                 if tp.exists():
                     tp.unlink()
 
-        job["used_asset_ids"] = [c["asset_id"] for c in selected_clips if c.get("asset_id")]
+        job["used_asset_ids"] = [
+            c["asset_id"] for c in selected_clips if c.get("asset_id")
+        ]
 
     def burn_final_video(
         self,
@@ -382,7 +406,14 @@ class VideoService:
                 )
 
         encoder_args = [
-            "-c:v", "libx264", "-preset", "medium", "-crf", "23", "-pix_fmt", "yuv420p",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "medium",
+            "-crf",
+            "23",
+            "-pix_fmt",
+            "yuv420p",
         ]
 
         has_music = music_path is not None
@@ -402,14 +433,23 @@ class VideoService:
             # cover_title_idx = 3 if both cover clip and cover title exist
             ct_idx = 3 if has_cover_title else None
             vf, v_label = _build_cover_video_filter(
-                cover_idx=0, base_idx=1,
-                width=width, height=height,
+                cover_idx=0,
+                base_idx=1,
+                width=width,
+                height=height,
                 cover_title_idx=ct_idx,
                 has_subtitles=has_subtitles,
                 srt_sub_escaped=srt_ffmpeg,
                 subtitle_style=subtitle_style,
             )
-            inputs = ["-i", str(cover_clip_path), "-i", str(base_video_path), "-i", str(audio_path)]
+            inputs = [
+                "-i",
+                str(cover_clip_path),
+                "-i",
+                str(base_video_path),
+                "-i",
+                str(audio_path),
+            ]
             if has_cover_title:
                 inputs += ["-i", str(cover_title_png)]
             audio_idx = 2
@@ -445,8 +485,15 @@ class VideoService:
         else:
             cmd += ["-map", v_label, "-map", a_label]
         cmd += encoder_args + [
-            "-c:a", "aac", "-b:a", "192k", "-shortest", "-movflags", "+faststart",
-            "-y", str(final_video_path),
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
+            "-shortest",
+            "-movflags",
+            "+faststart",
+            "-y",
+            str(final_video_path),
         ]
 
         subprocess.run(cmd, capture_output=True, text=True, timeout=600, check=True)

@@ -8,8 +8,15 @@ from typing import Any
 
 import yaml
 
-from packages.provider_config.catalog import default_provider_document, provider_options_payload
-from packages.provider_config.runtime_env import LLM_ENV_MAPPINGS, TTS_ENV_MAPPINGS, VISION_ENV_MAPPINGS
+from packages.provider_config.catalog import (
+    default_provider_document,
+    provider_options_payload,
+)
+from packages.provider_config.runtime_env import (
+    LLM_ENV_MAPPINGS,
+    TTS_ENV_MAPPINGS,
+    VISION_ENV_MAPPINGS,
+)
 
 SECRET_MASK = "***"
 CLEAR_SECRET_SENTINEL = "__CLEAR__"
@@ -59,7 +66,9 @@ def _merge_payload(payload: Any, previous: dict | None = None) -> dict:
             continue
 
         selected = incoming_section.get("selected")
-        if isinstance(selected, str) and (selected == "" or selected in section_default["providers"]):
+        if isinstance(selected, str) and (
+            selected == "" or selected in section_default["providers"]
+        ):
             merged_sections[section_name]["selected"] = selected
 
         incoming_providers = incoming_section.get("providers")
@@ -82,28 +91,40 @@ def _merge_payload(payload: Any, previous: dict | None = None) -> dict:
                 value = incoming_provider.get(field_name)
                 if field_name in json_fields:
                     if value == "":
-                        merged_sections[section_name]["providers"][provider_name][field_name] = ""
+                        merged_sections[section_name]["providers"][provider_name][
+                            field_name
+                        ] = ""
                         continue
                     if isinstance(value, (dict, list)):
-                        merged_sections[section_name]["providers"][provider_name][field_name] = value
+                        merged_sections[section_name]["providers"][provider_name][
+                            field_name
+                        ] = value
                         continue
                     if isinstance(value, str):
                         try:
-                            merged_sections[section_name]["providers"][provider_name][field_name] = json.loads(value)
+                            merged_sections[section_name]["providers"][provider_name][
+                                field_name
+                            ] = json.loads(value)
                         except json.JSONDecodeError:
-                            merged_sections[section_name]["providers"][provider_name][field_name] = value
+                            merged_sections[section_name]["providers"][provider_name][
+                                field_name
+                            ] = value
                     continue
                 if not isinstance(value, str):
                     continue
                 if field_name in secret_fields:
                     if value == CLEAR_SECRET_SENTINEL:
-                        merged_sections[section_name]["providers"][provider_name][field_name] = CLEAR_SECRET_SENTINEL
+                        merged_sections[section_name]["providers"][provider_name][
+                            field_name
+                        ] = CLEAR_SECRET_SENTINEL
                         continue
                     if value in {"", SECRET_MASK}:
                         previous_value = previous_provider.get(field_name)
                         if isinstance(previous_value, str) and previous_value:
                             value = previous_value
-                merged_sections[section_name]["providers"][provider_name][field_name] = value
+                merged_sections[section_name]["providers"][provider_name][
+                    field_name
+                ] = value
     return merged
 
 
@@ -125,7 +146,12 @@ def _inject_env_secrets(payload: dict, root_dir: Path) -> dict:
     for (section_name, provider_name, field_name), env_key in _SECRET_ENV_MAP.items():
         env_val = env_values.get(env_key, "")
         if env_val:
-            provider = result.get("providers", {}).get(section_name, {}).get("providers", {}).get(provider_name, {})
+            provider = (
+                result.get("providers", {})
+                .get(section_name, {})
+                .get("providers", {})
+                .get(provider_name, {})
+            )
             if isinstance(provider, dict) and field_name in provider:
                 provider[field_name] = SECRET_MASK
 
@@ -186,7 +212,9 @@ def _sync_secrets_to_env(root_dir: Path, payload: dict) -> dict:
         for provider_name, provider in section.get("providers", {}).items():
             for field_name, value in provider.items():
                 if value == CLEAR_SECRET_SENTINEL:
-                    env_key = _SECRET_ENV_MAP.get((section_name, provider_name, field_name))
+                    env_key = _SECRET_ENV_MAP.get(
+                        (section_name, provider_name, field_name)
+                    )
                     if env_key:
                         secrets_to_clear.add(env_key)
                     continue

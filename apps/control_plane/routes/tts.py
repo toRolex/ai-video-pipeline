@@ -67,7 +67,11 @@ class TTSPreviewRequest(BaseModel):
 
 
 PRESET_VOICES = [
-    {"id": "mimo_default", "label": "MiMo 默认音色", "note": "官方默认音色，中国区通常映射为冰糖"},
+    {
+        "id": "mimo_default",
+        "label": "MiMo 默认音色",
+        "note": "官方默认音色，中国区通常映射为冰糖",
+    },
     {"id": "冰糖", "label": "冰糖", "note": "中文女声，清亮自然"},
     {"id": "茉莉", "label": "茉莉", "note": "中文女声，柔和亲切"},
     {"id": "苏打", "label": "苏打", "note": "中文男声，适合短视频口播"},
@@ -142,7 +146,9 @@ async def save_tts_config(request: TTSConfigRequest, project_id: str | None = No
 @router.get("/voices")
 async def get_voices(provider: str = "mimo", model: str | None = None):
     if provider not in ("mimo", "qwen"):
-        raise HTTPException(status_code=400, detail=f"Unsupported TTS provider: {provider}")
+        raise HTTPException(
+            status_code=400, detail=f"Unsupported TTS provider: {provider}"
+        )
     if provider == "qwen":
         voices = QWEN_VOICES
         if model == "qwen3-tts-instruct-flash":
@@ -153,8 +159,7 @@ async def get_voices(provider: str = "mimo", model: str | None = None):
 
 @router.get("/metrics")
 async def get_tts_metrics(
-    project_id: str | None = None,
-    range: str = "24h"
+    project_id: str | None = None, range: str = "24h"
 ) -> dict[str, Any]:
     metrics = monitor.get_metrics(project_id, range)
     return {
@@ -184,19 +189,20 @@ async def get_tts_logs(
 
 @router.get("/errors/distribution")
 async def get_error_distribution(
-    project_id: str | None = None,
-    range: str = "7d"
+    project_id: str | None = None, range: str = "7d"
 ) -> dict[str, Any]:
     metrics = monitor.get_metrics(project_id, range)
     total_errors = sum(metrics.error_distribution.values())
 
     distribution = []
     for error_type, count in metrics.error_distribution.items():
-        distribution.append({
-            "type": error_type,
-            "count": count,
-            "percentage": count / total_errors if total_errors > 0 else 0
-        })
+        distribution.append(
+            {
+                "type": error_type,
+                "count": count,
+                "percentage": count / total_errors if total_errors > 0 else 0,
+            }
+        )
 
     return {"distribution": distribution, "total": total_errors}
 
@@ -204,7 +210,10 @@ async def get_error_distribution(
 @router.post("/preview")
 async def preview_tts(request: TTSPreviewRequest):
     try:
-        from packages.pipeline_services.tts_provider import MiMoTTSProvider, QwenTTSProvider
+        from packages.pipeline_services.tts_provider import (
+            MiMoTTSProvider,
+            QwenTTSProvider,
+        )
 
         config = config_manager.get_config().with_defaults()
 
@@ -222,7 +231,10 @@ async def preview_tts(request: TTSPreviewRequest):
             api_key = app_config.get_api_key("qwen")
             if not api_key:
                 raise HTTPException(status_code=500, detail="未配置 DASHSCOPE_API_KEY")
-            base_url = app_config.get_api_base_url("qwen") or "https://dashscope.aliyuncs.com/api/v1"
+            base_url = (
+                app_config.get_api_base_url("qwen")
+                or "https://dashscope.aliyuncs.com/api/v1"
+            )
             provider = QwenTTSProvider(api_key=api_key, base_url=base_url)
         elif model.startswith("mimo"):
             api_key = app_config.get_api_key("mimo")
@@ -248,7 +260,7 @@ async def preview_tts(request: TTSPreviewRequest):
         return Response(
             content=audio_bytes,
             media_type=media_type,
-            headers={"Content-Disposition": f"attachment; filename={filename}"}
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
         )
 
     except HTTPException:
@@ -283,7 +295,11 @@ async def upload_voice_clone_sample(
         )
 
     # 确定 MIME 类型
-    mime_type = "audio/mpeg" if file.content_type in ("audio/mpeg", "audio/mp3") else "audio/wav"
+    mime_type = (
+        "audio/mpeg"
+        if file.content_type in ("audio/mpeg", "audio/mp3")
+        else "audio/wav"
+    )
 
     # 使用 root_dir 派生 config_dir，确保测试与生产一致
     root_dir: Path = request.app.state.root_dir

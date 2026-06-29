@@ -9,13 +9,15 @@ def repo(tmp_path):
     db_path = tmp_path / "retriever_test.db"
     r = AssetRepository(db_path)
     for i, cat in enumerate([Category.CUTTING, Category.STIR_FRY, Category.MACRO]):
-        r.insert(AssetRecord(
-            asset_id=f"r{i}",
-            file_path=f"/data/{cat.value}/clip_{i}.mp4",
-            category=cat,
-            product="荔枝菌",
-            confidence=0.8,
-        ))
+        r.insert(
+            AssetRecord(
+                asset_id=f"r{i}",
+                file_path=f"/data/{cat.value}/clip_{i}.mp4",
+                category=cat,
+                product="荔枝菌",
+                confidence=0.8,
+            )
+        )
     yield r
 
 
@@ -46,14 +48,16 @@ def test_retrieve_fallback_when_no_match(repo):
 def test_retrieve_includes_duration_seconds(tmp_path):
     db_path = tmp_path / "duration_test.db"
     repo = AssetRepository(db_path)
-    repo.insert(AssetRecord(
-        asset_id="dur-1",
-        file_path="/data/clip.mp4",
-        category=Category.CUTTING,
-        product="荔枝菌",
-        confidence=0.9,
-        duration_seconds=7.5,
-    ))
+    repo.insert(
+        AssetRecord(
+            asset_id="dur-1",
+            file_path="/data/clip.mp4",
+            category=Category.CUTTING,
+            product="荔枝菌",
+            confidence=0.9,
+            duration_seconds=7.5,
+        )
+    )
 
     def classify_fn(sentence: str) -> str | None:
         return Category.CUTTING.value if sentence else None

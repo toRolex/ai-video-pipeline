@@ -27,6 +27,7 @@ from packages.provider_config.app_config import AppConfigManager
 # Public helpers
 # ---------------------------------------------------------------------------
 
+
 def to_url_path(path: Path, workspace_dir: Path) -> str:
     """Convert a workspace-relative *Path* to a URL-safe forward-slash string."""
     return path.relative_to(workspace_dir).as_posix()
@@ -35,6 +36,7 @@ def to_url_path(path: Path, workspace_dir: Path) -> str:
 # ---------------------------------------------------------------------------
 # TTS config shim (duck-type, preserves tts_provider.synthesize() API)
 # ---------------------------------------------------------------------------
+
 
 class _TTSConfigShim:
     """Duck-type config object built from the TTS config dict.
@@ -69,6 +71,7 @@ class _TTSConfigShim:
 # PhaseContext
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class PhaseContext:
     """Carries all per-invocation context that a phase handler needs."""
@@ -83,6 +86,7 @@ class PhaseContext:
 # ---------------------------------------------------------------------------
 # PhaseOrchestrator
 # ---------------------------------------------------------------------------
+
 
 class PhaseOrchestrator:
     """Strategy-map dispatcher: one handler per phase, injected dependencies."""
@@ -154,7 +158,10 @@ class PhaseOrchestrator:
         so that config changes (e.g. mimo → qwen) take effect immediately
         without restarting the worker.
         """
-        from packages.pipeline_services.tts_provider import MiMoTTSProvider, QwenTTSProvider
+        from packages.pipeline_services.tts_provider import (
+            MiMoTTSProvider,
+            QwenTTSProvider,
+        )
 
         app_config = AppConfigManager()
         tts_model = tts_cfg.get("model", "mimo-v2.5-tts") or ""
@@ -162,11 +169,13 @@ class PhaseOrchestrator:
         if tts_model.startswith("qwen"):
             return QwenTTSProvider(
                 api_key=app_config.get_api_key("qwen"),
-                base_url=app_config.get_api_base_url("qwen") or "https://dashscope.aliyuncs.com/api/v1",
+                base_url=app_config.get_api_base_url("qwen")
+                or "https://dashscope.aliyuncs.com/api/v1",
             )
         return MiMoTTSProvider(
             api_key=app_config.get_api_key("mimo"),
-            base_url=app_config.get_api_base_url("mimo") or "https://api.xiaomimimo.com/v1",
+            base_url=app_config.get_api_base_url("mimo")
+            or "https://api.xiaomimimo.com/v1",
         )
 
     # -- script_generating handler ------------------------------------------
@@ -192,10 +201,15 @@ class PhaseOrchestrator:
                         model = llm_cfg.get("model", "deepseek-v4-pro")
 
                     gen = ScriptGenerator(_LLMConfig())
-                    manual_script = gen.to_cantonese(manual_script, ctx.product, "滋元堂")
+                    manual_script = gen.to_cantonese(
+                        manual_script, ctx.product, "滋元堂"
+                    )
                     print("[SCRIPT] Converted manual script to Cantonese", flush=True)
                 except Exception as e:
-                    print(f"[SCRIPT WARN] Cantonese conversion failed, using original: {e}", flush=True)
+                    print(
+                        f"[SCRIPT WARN] Cantonese conversion failed, using original: {e}",
+                        flush=True,
+                    )
 
             txt_path = job_dir / "口播文案.txt"
             txt_path.write_text(manual_script, encoding="utf-8")
@@ -215,7 +229,9 @@ class PhaseOrchestrator:
         else:
             language = ctx.options.get("language", "mandarin")
             script_result = self._script_bridge.generate(
-                product=ctx.product, output_dir=job_dir, mock=False,
+                product=ctx.product,
+                output_dir=job_dir,
+                mock=False,
                 language=language,
             )
 
@@ -232,7 +248,9 @@ class PhaseOrchestrator:
         return result
 
     def _maybe_generate_cover_title(
-        self, ctx: PhaseContext, script_result: dict[str, Any],
+        self,
+        ctx: PhaseContext,
+        script_result: dict[str, Any],
     ) -> None:
         """Auto-generate cover title if the job JSON has no ``cover_title.text``.
 
@@ -325,6 +343,7 @@ class PhaseOrchestrator:
                 except Exception as e:
                     print(f"[TTS ERROR] {type(e).__name__}: {e}", flush=True)
                     import traceback
+
                     traceback.print_exc()
             else:
                 print(f"[TTS WARN] No script text found in {job_dir}", flush=True)
@@ -351,10 +370,16 @@ class PhaseOrchestrator:
         workspace_dir = ctx.root_dir / "workspace"
         audio_path = job_dir / "audio.mp3"
         srt_path = job_dir / "subtitles.srt"
-        print(f"[SUBTITLE] audio exists={audio_path.exists()}, srt exists={srt_path.exists()}", flush=True)
+        print(
+            f"[SUBTITLE] audio exists={audio_path.exists()}, srt exists={srt_path.exists()}",
+            flush=True,
+        )
         if audio_path.exists():
             script_text = self._discover_script(job_dir) or ""
-            print(f"[SUBTITLE] script found={bool(script_text)}, len={len(script_text)}", flush=True)
+            print(
+                f"[SUBTITLE] script found={bool(script_text)}, len={len(script_text)}",
+                flush=True,
+            )
             if script_text:
                 try:
                     self._subtitle_svc.build_srt(audio_path, srt_path, script_text)
@@ -362,6 +387,7 @@ class PhaseOrchestrator:
                 except Exception as e:
                     print(f"[SUBTITLE ERROR] {type(e).__name__}: {e}", flush=True)
                     import traceback
+
                     traceback.print_exc()
         else:
             print(f"[SUBTITLE WARN] audio.mp3 not found in {job_dir}", flush=True)
@@ -380,15 +406,20 @@ class PhaseOrchestrator:
 
         if not script_text:
             print("[ASSET] No script text found — emitting sentinel", flush=True)
-            return [ArtifactPointer(
-                kind="asset_retrieval_done",
-                relative_path="",
-                url="",
-                size_bytes=0,
-            )]
+            return [
+                ArtifactPointer(
+                    kind="asset_retrieval_done",
+                    relative_path="",
+                    url="",
+                    size_bytes=0,
+                )
+            ]
 
         from packages.file_store.paths import shared_asset_db_path
-        from packages.pipeline_services.asset_library import AssetRepository, AssetRetriever
+        from packages.pipeline_services.asset_library import (
+            AssetRepository,
+            AssetRetriever,
+        )
         from packages.pipeline_services.asset_library.classify import create_classify_fn
 
         db_path = shared_asset_db_path(ctx.root_dir)
@@ -424,7 +455,9 @@ class PhaseOrchestrator:
             encoding="utf-8",
         )
 
-        print(f"[ASSET] Retrieved {len(selected)} clips -> {clip_list_path}", flush=True)
+        print(
+            f"[ASSET] Retrieved {len(selected)} clips -> {clip_list_path}", flush=True
+        )
         return [self._to_artifact("selected_clips", clip_list_path, workspace_dir)]
 
     # -- video_rendering handler ---------------------------------------------
@@ -438,21 +471,33 @@ class PhaseOrchestrator:
         base_path = job_dir / "base.mp4"
 
         if not audio_path.exists():
-            print(f"[VIDEO WARN] audio.mp3 not found, skipping video composition for {ctx.job_id}", flush=True)
+            print(
+                f"[VIDEO WARN] audio.mp3 not found, skipping video composition for {ctx.job_id}",
+                flush=True,
+            )
         elif not clip_list_path.exists():
-            print(f"[VIDEO WARN] selected_clips.json not found for {ctx.job_id}", flush=True)
+            print(
+                f"[VIDEO WARN] selected_clips.json not found for {ctx.job_id}",
+                flush=True,
+            )
         else:
             selected = json.loads(clip_list_path.read_text(encoding="utf-8"))
             selected = [item for item in selected if Path(item["file_path"]).exists()]
 
             if not selected:
-                print(f"[VIDEO WARN] no valid clips found after filtering for {ctx.job_id}", flush=True)
+                print(
+                    f"[VIDEO WARN] no valid clips found after filtering for {ctx.job_id}",
+                    flush=True,
+                )
             else:
                 self._video_svc.build_base_video(
                     ctx.project_dir,
                     {
                         "job_id": ctx.job_id,
-                        "asset_bundle": {"audio_path": str(audio_path), "selected_clips": selected},
+                        "asset_bundle": {
+                            "audio_path": str(audio_path),
+                            "selected_clips": selected,
+                        },
                         "sequence": 1,
                     },
                     base_path,
@@ -500,7 +545,11 @@ class PhaseOrchestrator:
                     music_path = None
 
         actual_srt_path = None if skip_subtitle else srt_path
-        if base_path.exists() and audio_path.exists() and (skip_subtitle or srt_path.exists()):
+        if (
+            base_path.exists()
+            and audio_path.exists()
+            and (skip_subtitle or srt_path.exists())
+        ):
             self._video_svc.burn_final_video(
                 base_path,
                 audio_path,

@@ -32,4 +32,10 @@ def project_root(root: Path, project_id: str) -> Path:
 
 
 def job_manifest_path(root: Path, project_id: str, job_id: str) -> Path:
-    return project_root(root, project_id) / "runtime" / "jobs" / job_id / "job_manifest.json"
+    return (
+        project_root(root, project_id)
+        / "runtime"
+        / "jobs"
+        / job_id
+        / "job_manifest.json"
+    )

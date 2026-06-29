@@ -32,7 +32,9 @@ class ScheduleStore:
         """)
         self._conn.commit()
 
-    def add(self, job_id: str, platform: str, title: str = "", description: str = "") -> int:
+    def add(
+        self, job_id: str, platform: str, title: str = "", description: str = ""
+    ) -> int:
         cur = self._conn.execute(
             "INSERT INTO schedule_entries (job_id, platform, title, description) VALUES (?, ?, ?, ?)",
             (job_id, platform, title, description),
@@ -41,7 +43,9 @@ class ScheduleStore:
         assert cur.lastrowid is not None
         return cur.lastrowid
 
-    def list(self, project_id: str | None = None, platform: str | None = None) -> list[dict]:
+    def list(
+        self, project_id: str | None = None, platform: str | None = None
+    ) -> list[dict]:
         sql = "SELECT * FROM schedule_entries WHERE 1=1"
         params: list = []
         if project_id:

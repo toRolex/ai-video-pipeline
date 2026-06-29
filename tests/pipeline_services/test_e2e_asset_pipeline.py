@@ -15,11 +15,16 @@ def _create_mock_video(output_path: Path, duration: float = 3.0) -> Path:
     ffmpeg = shutil.which("ffmpeg") or os.environ.get("FFMPEG_PATH", "ffmpeg")
     cmd = [
         str(ffmpeg),
-        "-f", "lavfi",
-        "-i", f"color=c=black:s=320x240:d={duration}:r=24",
-        "-c:v", "libx264",
-        "-preset", "ultrafast",
-        "-pix_fmt", "yuv420p",
+        "-f",
+        "lavfi",
+        "-i",
+        f"color=c=black:s=320x240:d={duration}:r=24",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "ultrafast",
+        "-pix_fmt",
+        "yuv420p",
         "-y",
         str(output_path),
     ]
@@ -43,19 +48,31 @@ class TestE2EAssetPipeline:
         repo = AssetRepository(db_path)
         records = [
             AssetRecord(
-                asset_id="e2e_001", file_path=str(source_dir / "clip_cut.mp4"),
-                category=Category.CUTTING, product="荔枝菌", confidence=0.9,
-                duration_seconds=3.0, status="available",
+                asset_id="e2e_001",
+                file_path=str(source_dir / "clip_cut.mp4"),
+                category=Category.CUTTING,
+                product="荔枝菌",
+                confidence=0.9,
+                duration_seconds=3.0,
+                status="available",
             ),
             AssetRecord(
-                asset_id="e2e_002", file_path=str(source_dir / "clip_stir.mp4"),
-                category=Category.STIR_FRY, product="荔枝菌", confidence=0.8,
-                duration_seconds=3.0, status="available",
+                asset_id="e2e_002",
+                file_path=str(source_dir / "clip_stir.mp4"),
+                category=Category.STIR_FRY,
+                product="荔枝菌",
+                confidence=0.8,
+                duration_seconds=3.0,
+                status="available",
             ),
             AssetRecord(
-                asset_id="e2e_003", file_path=str(source_dir / "clip_macro.mp4"),
-                category=Category.FINISHED, product="荔枝菌", confidence=0.7,
-                duration_seconds=3.0, status="available",
+                asset_id="e2e_003",
+                file_path=str(source_dir / "clip_macro.mp4"),
+                category=Category.FINISHED,
+                product="荔枝菌",
+                confidence=0.7,
+                duration_seconds=3.0,
+                status="available",
             ),
         ]
         for r in records:
@@ -96,10 +113,14 @@ class TestE2EAssetPipeline:
         db_path = tmp_path / "fallback_test.db"
         repo = AssetRepository(db_path)
 
-        repo.insert(AssetRecord(
-            asset_id="fb_001", file_path="/x.mp4",
-            category=Category.MACRO, product="荔枝菌",
-        ))
+        repo.insert(
+            AssetRecord(
+                asset_id="fb_001",
+                file_path="/x.mp4",
+                category=Category.MACRO,
+                product="荔枝菌",
+            )
+        )
 
         retriever = AssetRetriever(repo)
         script = "今天天气真好。出去散步走走。"

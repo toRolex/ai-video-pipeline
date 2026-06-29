@@ -50,7 +50,9 @@ def _ensure_selected_providers_are_valid(payload: dict) -> None:
             continue
         allowed = options.get(section_name, {}).get("providers", {})
         if selected and selected not in allowed:
-            raise HTTPException(status_code=400, detail=f"invalid provider: {section_name}.{selected}")
+            raise HTTPException(
+                status_code=400, detail=f"invalid provider: {section_name}.{selected}"
+            )
 
 
 def _normalize_payload(payload: dict) -> dict:
@@ -67,7 +69,9 @@ def _normalize_payload(payload: dict) -> dict:
         provider_payloads = section_payload.get("providers")
         if not isinstance(provider_payloads, dict):
             continue
-        for provider_name, provider_options in section_options.get("providers", {}).items():
+        for provider_name, provider_options in section_options.get(
+            "providers", {}
+        ).items():
             provider_payload = provider_payloads.get(provider_name)
             if not isinstance(provider_payload, dict):
                 continue
@@ -87,5 +91,7 @@ def _normalize_payload(payload: dict) -> dict:
                 try:
                     provider_payload[field_name] = json.loads(value)
                 except json.JSONDecodeError as exc:
-                    raise HTTPException(status_code=400, detail="invalid json field") from exc
+                    raise HTTPException(
+                        status_code=400, detail="invalid json field"
+                    ) from exc
     return normalized
