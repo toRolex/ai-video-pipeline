@@ -2,18 +2,25 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
+from unittest.mock import MagicMock, Mock
 
 import pytest
 
-from packages.domain_core.models import JobRecord, ArtifactPointer
+from packages.domain_core.models import ArtifactPointer, JobRecord
+from packages.file_store.repository import FileStoreRepository
 from packages.pipeline_services.job_tick_service import (
     HANDLED_PHASES,
     REVIEW_PHASES,
+    JobTickService,
+    PhaseExecutionError,
     TickAction,
+    TickSummary,
     _compute_transition,
     _transition_after_artifacts,
 )
+from packages.pipeline_services.phase_orchestrator import PhaseOrchestrator
 
 
 # ---------------------------------------------------------------------------
@@ -391,4 +398,73 @@ class TestEdgeCases:
     def test_next_phase_safe_returns_completed(self) -> None:
         """Completed phase has no next phase."""
         from packages.pipeline_services.job_tick_service import _safe_next
+
         assert _safe_next("completed") == "completed"
+
+
+# ---------------------------------------------------------------------------
+# JobTickService integration tests
+# ---------------------------------------------------------------------------
+
+
+class TestJobTickService:
+    """Tests for JobTickService.tick()."""
+
+    def test_tick_runs_handler_and_advances(self) -> None:
+        """tick() should run the handler and advance phase."""
+        record = make_record(phase="queued")
+        mock_repo = Mock(spec=FileStoreRepository)
+        mock_repo.load_job.return_value = record
+        mock_orch = Mock(spec=PhaseOrchestrator)
+        mock_orch.run_phase.return_value = [
+            ArtifactPointer(kind="script", relative_path="script.txt")
+        ]
+
+        svc = JobTickService(orchestrator=mock_orch, repo=mock_repo)
+        summary = svc.tick(
+            "proj-001",
+            "test-job",
+            "羊肚菌",
+            root_dir=Path("/tmp"),
+            project_dir=Path("/tmp/proj"),
+        )
+
+        assert summary.action in ("advanced", "completed")
+        mock_orch.run_phase.assert_called_once()
+        mock_repo.save_job.assert_called_once()
+
+    def test_tick_skips_terminal_phase(self) -> None:
+        """Terminal jobs should be skipped."""
+        record = make_record(phase="completed")
+        mock_repo = Mock(spec=FileStoreRepository)
+        mock_repo.load_job.return_value = record
+        svc = JobTickService(orchestrator=Mock(spec=PhaseOrchestrator), repo=mock_repo)
+        summary = svc.tick(
+            "proj-001",
+            "test-job",
+            "羊肚菌",
+            root_dir=Path("/tmp"),
+            project_dir=Path("/tmp/proj"),
+        )
+        assert summary.action == "skipped"
+        mock_repo.save_job.assert_not_called()
+
+    def test_tick_wraps_orchestrator_error(self) -> None:
+        """Orchestrator failure should raise PhaseExecutionError."""
+        record = make_record(phase="script_generating")
+        mock_repo = Mock(spec=FileStoreRepository)
+        mock_repo.load_job.return_value = record
+        mock_orch = Mock(spec=PhaseOrchestrator)
+        mock_orch.run_phase.side_effect = RuntimeError("API failure")
+
+        svc = JobTickService(orchestrator=mock_orch, repo=mock_repo)
+        with pytest.raises(PhaseExecutionError) as exc:
+            svc.tick(
+                "proj-001",
+                "test-job",
+                "羊肚菌",
+                root_dir=Path("/tmp"),
+                project_dir=Path("/tmp/proj"),
+            )
+        assert exc.value.job_id == "test-job"
+        assert exc.value.phase == "script_generating"

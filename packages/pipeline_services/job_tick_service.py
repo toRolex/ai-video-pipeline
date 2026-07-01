@@ -11,10 +11,13 @@ contained in a single referentially transparent function.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
-from packages.domain_core.models import JobRecord
+from packages.domain_core.models import ArtifactPointer, JobRecord
 from packages.domain_core.state import next_phase
+from packages.file_store.repository import FileStoreRepository
+from packages.pipeline_services.phase_orchestrator import PhaseContext, PhaseOrchestrator
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -269,3 +272,140 @@ def _transition_after_artifacts(
         new_phase=_safe_next(phase),
         message=f"auto-advance from {phase} (fallback)",
     )
+
+
+# ---------------------------------------------------------------------------
+# JobTickService — orchestrator-aware tick loop
+# ---------------------------------------------------------------------------
+
+
+class JobTickService:
+    """Deep module: job lifecycle tick behind a two-method interface.
+
+    Coordinates the load → _compute_transition → run handler →
+    _transition_after_artifacts → persist → log lifecycle for a single job.
+    """
+
+    def __init__(
+        self,
+        orchestrator: PhaseOrchestrator,
+        repo: FileStoreRepository,
+    ) -> None:
+        self._orchestrator = orchestrator
+        self._repo = repo
+
+    def tick(
+        self,
+        project_id: str,
+        job_id: str,
+        product: str,
+        *,
+        root_dir: Path,
+        project_dir: Path,
+        options: dict[str, str] | None = None,
+    ) -> TickSummary:
+        """Auto-tick entry point: advances a single job by one step.
+
+        Parameters
+        ----------
+        project_id : str
+            Project the job belongs to.
+        job_id : str
+            Unique job identifier.
+        product : str
+            Product name for the pipeline.
+        root_dir : Path
+            Root directory (parent of ``workspace/``).
+        project_dir : Path
+            Project working directory.
+        options : dict or None
+            Extra options forwarded to the phase context (e.g.
+            ``manual_script``, ``uploaded_audio_path``, ``language``).
+
+        Returns
+        -------
+        TickSummary
+            Describes what happened during this tick cycle.
+
+        Raises
+        ------
+        PhaseExecutionError
+            When a phase handler raises an unexpected exception.
+        """
+        # 1. Load current state
+        record = self._repo.load_job(project_id, job_id)
+        initial_phase = record.phase
+
+        # 2. First transition decision (pre-handler)
+        action = _compute_transition(record, ())
+
+        # 3. Execute handler if the transition requires it
+        artifacts: list[ArtifactPointer] = []
+        if action.run_handler:
+            ctx = PhaseContext(
+                job_id=job_id,
+                project_dir=project_dir,
+                root_dir=root_dir,
+                product=product,
+                options=options or {},
+            )
+            handler_phase = action.handler_phase or record.phase
+            try:
+                artifacts = self._orchestrator.run_phase(handler_phase, ctx)
+            except Exception as e:
+                raise PhaseExecutionError(
+                    job_id, handler_phase, str(e), e
+                ) from e
+
+            # Merge new artifacts into existing ones (avoid duplicates by kind)
+            existing_kinds = {a.kind for a in record.artifacts}
+            for a in artifacts:
+                if a.kind not in existing_kinds:
+                    record.artifacts.append(a)
+                    existing_kinds.add(a.kind)
+
+            # 4. Second transition decision after handler ran
+            if action.new_phase is not None:
+                # Auto-approve or similar: first action already includes the
+                # target transition — use it directly.
+                pass
+            else:
+                # Build a temporary record whose phase matches the handler that
+                # just ran, so per-phase failure/advance rules apply correctly.
+                temp_record = record.model_copy(update={"phase": handler_phase})
+                action = _transition_after_artifacts(temp_record, tuple(artifacts))
+
+        # 5. Apply phase / review_status changes
+        update: dict[str, Any] = {}
+        if action.new_phase is not None:
+            update["phase"] = action.new_phase
+        if action.new_review_status is not None:
+            update["review_status"] = action.new_review_status
+
+        if update:
+            record = record.model_copy(update=update)
+
+        # 6. Persist (only when something actually changed)
+        if update or action.run_handler:
+            self._repo.save_job(project_id, record)
+            if action.review_event:
+                event = {"job_id": job_id, "project_id": project_id, **action.review_event}
+                self._repo.append_review_event(project_id, event)
+
+        # 7. Build summary
+        to_phase = action.new_phase if action.new_phase is not None else initial_phase
+        if to_phase == initial_phase and not action.run_handler:
+            action_type = "skipped"
+        elif to_phase == "completed":
+            action_type = "completed"
+        elif to_phase == "failed":
+            action_type = "failed"
+        else:
+            action_type = "advanced"
+
+        return TickSummary(
+            action=action_type,
+            from_phase=initial_phase,
+            to_phase=to_phase,
+            message=action.message,
+        )
