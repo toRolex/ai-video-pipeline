@@ -284,7 +284,7 @@ export default function AnalyticsStaticPage() {
       filtered.length > 0
         ? filtered.reduce((s, d) => s + fmt(d.avg_completion, 0), 0) / filtered.length
         : 0;
-    const videoCount = filtered.reduce((s, d) => s + d.plays > 0 ? 1 : 0, 0);
+    const videoCount = filtered.reduce((s, d) => (d.plays > 0 ? s + 1 : s), 0);
     return {
       total_plays: totalPlays,
       total_likes: totalLikes,

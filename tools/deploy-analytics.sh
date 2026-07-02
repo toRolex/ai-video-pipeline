@@ -21,7 +21,7 @@ echo "========================================"
 echo ""
 echo "[1/4] Building frontend …"
 cd "$ROOT/frontend"
-npm run build
+pnpm run build
 
 # Step 2: Save snapshot & export JSON data
 echo ""
