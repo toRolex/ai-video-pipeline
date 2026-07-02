@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import type { MetricsOverview, TopicStat, VideoMetric, IncrementData } from "../types";
+import type { MetricsOverview, TopicStat, VideoMetric, IncrementData, DailyIncrement, VideoIncrement } from "../types";
 import MetricsCards from "../components/MetricsCards";
 import TrendChart from "../components/TrendChart";
 import TopicGrid from "../components/TopicGrid";
 import VideoTable from "../components/VideoTable";
+import ReactECharts from "echarts-for-react";
 
 function fmt(v: unknown, fallback: number): number {
   const n = Number(v);
@@ -54,7 +55,7 @@ function DeltaCards({ data }: { data: IncrementData | null }) {
             className="rounded-xl border border-gray-200 p-5 bg-white"
           >
             <div className="text-sm text-gray-500 mb-1">{it.label}</div>
-            <div className={`text-2xl font-bold ${it.key === "plays_delta" || it.key === "likes_delta" ? it.color : it.color}`}>
+            <div className={`text-2xl font-bold ${it.color}`}>
               {prefix}{formatNum(Math.abs(val))}
             </div>
             <div className="text-xs text-gray-400 mt-1">
@@ -63,6 +64,136 @@ function DeltaCards({ data }: { data: IncrementData | null }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+
+// ── Increment Trend Chart ────────────────────────────
+
+function IncrementTrendChart({ data }: { data: DailyIncrement[] }) {
+  const dates = data.map((d) => d.date);
+  const plays = data.map((d) => d.plays_delta);
+  const likes = data.map((d) => d.likes_delta);
+  const followers = data.map((d) => d.followers_delta);
+
+  const option = {
+    tooltip: { trigger: "axis" as const },
+    legend: { data: ["播放增量", "点赞增量", "涨粉增量"], top: 4 },
+    grid: { top: 40, bottom: 30, left: 60, right: 60 },
+    xAxis: {
+      type: "category" as const,
+      data: dates,
+      axisLabel: { fontSize: 11 },
+    },
+    yAxis: [
+      {
+        type: "value" as const,
+        name: "播放增量",
+        position: "left" as const,
+        axisLabel: { fontSize: 11 },
+      },
+      {
+        type: "value" as const,
+        name: "互动增量",
+        position: "right" as const,
+        axisLabel: { fontSize: 11 },
+      },
+    ],
+    series: [
+      {
+        name: "播放增量",
+        type: "bar",
+        data: plays,
+        yAxisIndex: 0,
+        itemStyle: { color: "#3b82f6" },
+      },
+      {
+        name: "点赞增量",
+        type: "line",
+        smooth: true,
+        data: likes,
+        yAxisIndex: 1,
+      },
+      {
+        name: "涨粉增量",
+        type: "line",
+        smooth: true,
+        data: followers,
+        yAxisIndex: 1,
+      },
+    ],
+  };
+
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-4">
+      <div className="text-sm text-gray-500 mb-2">分日增量趋势</div>
+      <ReactECharts option={option} style={{ height: 320 }} />
+    </div>
+  );
+}
+
+
+// ── Top Gainers Table ────────────────────────────────
+
+function TopGainersTable({ gainers }: { gainers: VideoIncrement[] }) {
+  const [search, setSearch] = useState("");
+
+  const filtered = useMemo(() => {
+    if (!search) return gainers;
+    const q = search.toLowerCase();
+    return gainers.filter((g) => g.title.toLowerCase().includes(q));
+  }, [gainers, search]);
+
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div className="text-sm text-gray-500">增量 Top 视频</div>
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="搜索视频标题…"
+          className="px-3 py-1 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-300 w-48"
+        />
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-gray-100 text-left text-gray-500">
+              <th className="pb-2 font-medium">标题</th>
+              <th className="pb-2 font-medium w-24">播放增量</th>
+              <th className="pb-2 font-medium w-20">点赞增量</th>
+              <th className="pb-2 font-medium w-20">涨粉增量</th>
+              <th className="pb-2 font-medium w-20">分享增量</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((g, i) => (
+              <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
+                <td className="py-2.5 pr-4 text-gray-800 truncate max-w-xs" title={g.title}>
+                  {g.title}
+                </td>
+                <td className="py-2.5 text-blue-600 font-medium">
+                  +{g.plays_delta.toLocaleString()}
+                </td>
+                <td className="py-2.5 text-pink-600">
+                  +{g.likes_delta.toLocaleString()}
+                </td>
+                <td className="py-2.5 text-green-600">
+                  +{g.followers_delta.toLocaleString()}
+                </td>
+                <td className="py-2.5 text-orange-600">
+                  +{g.shares_delta.toLocaleString()}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {filtered.length === 0 && search && (
+        <div className="text-center text-gray-400 py-6">未找到匹配的视频</div>
+      )}
     </div>
   );
 }
@@ -307,6 +438,21 @@ export default function AnalyticsStaticPage() {
                 <div className="text-xs text-gray-400 text-right">
                   对比周期：{incrementData.previous_snapshot} → {incrementData.snapshot_date}
                 </div>
+              )}
+
+              {/* Daily delta trend chart */}
+              {incrementData && incrementData.daily_trend.length > 1 && (
+                <IncrementTrendChart data={incrementData.daily_trend} />
+              )}
+              {incrementData && incrementData.daily_trend.length <= 1 && (
+                <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-gray-400">
+                  至少需要 2 天数据才能展示增量趋势
+                </div>
+              )}
+
+              {/* Top gainers */}
+              {incrementData && incrementData.top_gainers.length > 0 && (
+                <TopGainersTable gainers={incrementData.top_gainers} />
               )}
             </>
           )}
