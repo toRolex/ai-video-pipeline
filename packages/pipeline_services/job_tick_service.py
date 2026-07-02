@@ -156,19 +156,26 @@ def _compute_transition(
 
         # 2b. Auto-approve — approve without waiting for human
         if record.auto_approve and record.review_status not in ("approved", "pending"):
+            next_p = _safe_next(phase)
+            # Chain through subtitle_generating in the same tick to close
+            # the race window where a worker could grab the job before
+            # the next auto_tick cycle checks skip_subtitle.
+            if next_p == "subtitle_generating" and record.skip_subtitle:
+                next_p = _safe_next(next_p)
+
             if phase in HANDLED_PHASES:
                 return TickAction(
                     run_handler=True,
                     handler_phase=phase,
-                    new_phase=_safe_next(phase),
+                    new_phase=next_p,
                     new_review_status="approved",
                     review_event={"event": "auto_approve"},
-                    message=f"auto-approve {phase} (has handler)",
+                    message=f"auto-approve {phase} → {next_p} (has handler)",
                 )
             return TickAction(
-                new_phase=_safe_next(phase),
+                new_phase=next_p,
                 new_review_status="approved",
-                message=f"auto-approve {phase} (no handler)",
+                message=f"auto-approve {phase} → {next_p} (no handler)",
             )
 
         # 2c. Waiting for human review

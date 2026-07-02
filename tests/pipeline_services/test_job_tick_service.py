@@ -197,6 +197,38 @@ class TestReviewAutoApprove:
         assert action.run_handler is False
         assert action.new_phase is None
 
+    def test_auto_approve_with_skip_subtitle_chains_past_subtitle(self) -> None:
+        """auto_approve + skip_subtitle should skip over subtitle_generating."""
+        # tts_review → normally → subtitle_generating, but with skip_subtitle
+        # should go directly to asset_retrieving
+        action = _compute_transition(
+            make_record(phase="tts_review", auto_approve=True, skip_subtitle=True),
+            (),
+        )
+        assert action.new_phase == "asset_retrieving"  # skips subtitle_generating
+        assert action.new_review_status == "approved"
+
+    def test_auto_approve_skip_subtitle_no_handler(self) -> None:
+        """auto_approve + skip_subtitle on a no-handler review still chains."""
+        # asset_review has no handler, normally → video_rendering.
+        # subtitle_generating is not in the chain from asset_review,
+        # so this should behave normally.
+        action = _compute_transition(
+            make_record(phase="asset_review", auto_approve=True, skip_subtitle=True),
+            (),
+        )
+        assert action.new_phase == "video_rendering"
+        assert action.new_review_status == "approved"
+
+    def test_auto_approve_no_skip_subtitle_goes_to_subtitle(self) -> None:
+        """Without skip_subtitle, auto_approve should still go to subtitle."""
+        action = _compute_transition(
+            make_record(phase="tts_review", auto_approve=True),
+            (),
+        )
+        assert action.new_phase == "subtitle_generating"
+        assert action.new_review_status == "approved"
+
 
 # ---------------------------------------------------------------------------
 # 3. Subtitle skip
