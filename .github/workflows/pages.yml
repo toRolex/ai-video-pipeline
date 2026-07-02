@@ -1,8 +1,6 @@
 name: Deploy to GitHub Pages
 
 on:
-  push:
-    branches: [gh-pages]
   workflow_dispatch:
 
 permissions:
@@ -19,14 +17,14 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: gh-pages
-      - uses: actions/configure-pages@v5
+      - run: ls -la
       - uses: actions/upload-pages-artifact@v3
         with:
           path: .
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - uses: actions/deploy-pages@v4
+        id: deployment
+      - run: echo "Deployed to ${{ steps.deployment.outputs.page_url }}"
