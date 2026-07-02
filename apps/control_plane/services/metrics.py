@@ -623,3 +623,171 @@ class MetricsStore:
 
         topics.sort(key=lambda x: x["total_plays"], reverse=True)
         return topics[:limit]
+
+    # ── Increment computation ──────────────────────────────────────────────────────
+
+    def compute_increment(
+        self,
+        current_snapshot_date: str,
+        previous_snapshot_date: str,
+        platform: str | None = None,
+        include_detail: bool = False,
+    ) -> dict[str, Any]:
+        """Compute day-over-day delta between two snapshot dates.
+
+        Queries records by ``imported_at LIKE '<date>%'`` for each snapshot,
+        then compares (platform, title, publish_date) keys to classify each
+        video as **new**, **updated**, or **disappeared**.
+
+        Parameters
+        ----------
+        current_snapshot_date:
+            ISO date string for the *current* snapshot (e.g. ``"2026-07-02"``).
+        previous_snapshot_date:
+            ISO date string for the *previous* snapshot (e.g. ``"2026-07-01"``).
+        platform:
+            Optional platform filter.
+        include_detail:
+            When ``True``, the returned dict includes a ``"detail"`` key with
+            every new/updated video's delta (for ``increment-detail.json``).
+
+        Returns
+        -------
+        dict with keys:
+            snapshot_date, previous_snapshot, summary, top_gainers, daily_trend
+            and optionally ``detail`` (when *include_detail* is ``True``).
+        """
+
+        def _fetch(date_str: str) -> list[sqlite3.Row]:
+            where = ["imported_at LIKE ?"]
+            params: list[Any] = [f"{date_str}%"]
+            if platform:
+                where.append("platform = ?")
+                params.append(platform)
+            conn = self._conn()
+            try:
+                return conn.execute(
+                    f"SELECT * FROM video_metrics WHERE {' AND '.join(where)}",
+                    params,
+                ).fetchall()
+            finally:
+                conn.close()
+
+        current_rows = _fetch(current_snapshot_date)
+        previous_rows = _fetch(previous_snapshot_date)
+
+        # Build keyed dicts
+        current_map: dict[tuple[str, str, str], sqlite3.Row] = {
+            (r["platform"], r["title"], r["publish_date"]): r for r in current_rows
+        }
+        previous_map: dict[tuple[str, str, str], sqlite3.Row] = {
+            (r["platform"], r["title"], r["publish_date"]): r for r in previous_rows
+        }
+
+        all_keys = set(current_map.keys()) | set(previous_map.keys())
+
+        # Fields to diff
+        delta_fields = ["plays", "likes", "comments", "shares", "followers_gained"]
+        delta_out = {
+            "plays": "plays_delta",
+            "likes": "likes_delta",
+            "comments": "comments_delta",
+            "shares": "shares_delta",
+            "followers_gained": "followers_delta",
+        }
+
+        summary: dict[str, int] = {
+            "plays_delta": 0,
+            "likes_delta": 0,
+            "followers_delta": 0,
+            "shares_delta": 0,
+            "comments_delta": 0,
+            "new_videos": 0,
+            "updated_videos": 0,
+            "disappeared_videos": 0,
+        }
+
+        top_gainers: list[dict[str, Any]] = []
+        detail: list[dict[str, Any]] = []
+        daily_agg: dict[str, dict[str, int]] = {}
+
+        for key in all_keys:
+            p, title, pub_date = key
+            in_cur = key in current_map
+            in_prev = key in previous_map
+
+            if in_cur and not in_prev:
+                # New video
+                summary["new_videos"] += 1
+                cur = current_map[key]
+                item: dict[str, Any] = {
+                    "title": title,
+                    "platform": p,
+                    "publish_date": pub_date,
+                }
+                for field, out_name in delta_out.items():
+                    val = cur[field] or 0
+                    item[out_name] = val
+                    summary[out_name] += val
+                if item["plays_delta"] > 0:
+                    top_gainers.append(item)
+                detail.append(item)
+
+                # Daily trend
+                agg = daily_agg.setdefault(
+                    pub_date,
+                    {"plays_delta": 0, "likes_delta": 0, "followers_delta": 0},
+                )
+                for out_name in ("plays_delta", "likes_delta", "followers_delta"):
+                    agg[out_name] += item[out_name]
+
+            elif not in_cur and in_prev:
+                # Disappeared video
+                summary["disappeared_videos"] += 1
+
+            else:
+                # Updated video
+                summary["updated_videos"] += 1
+                cur = current_map[key]
+                prev = previous_map[key]
+                item = {
+                    "title": title,
+                    "platform": p,
+                    "publish_date": pub_date,
+                }
+                for field, out_name in delta_out.items():
+                    delta = (cur[field] or 0) - (prev[field] or 0)
+                    item[out_name] = delta
+                    summary[out_name] += delta
+                if item["plays_delta"] > 0:
+                    top_gainers.append(item)
+                detail.append(item)
+
+                # Daily trend
+                agg = daily_agg.setdefault(
+                    pub_date,
+                    {"plays_delta": 0, "likes_delta": 0, "followers_delta": 0},
+                )
+                for out_name in ("plays_delta", "likes_delta", "followers_delta"):
+                    agg[out_name] += item[out_name]
+
+        # Sort top_gainers by plays_delta desc, limit 10
+        top_gainers.sort(key=lambda x: x["plays_delta"], reverse=True)
+        top_gainers = top_gainers[:10]
+
+        # Daily trend sorted by date
+        daily_trend = [
+            {"date": date, **agg}
+            for date, agg in sorted(daily_agg.items())
+        ]
+
+        result: dict[str, Any] = {
+            "snapshot_date": current_snapshot_date,
+            "previous_snapshot": previous_snapshot_date,
+            "summary": summary,
+            "top_gainers": top_gainers,
+            "daily_trend": daily_trend,
+        }
+        if include_detail:
+            result["detail"] = detail
+        return result
