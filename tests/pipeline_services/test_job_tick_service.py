@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
-from unittest.mock import MagicMock, Mock
+from unittest.mock import Mock
 
 import pytest
 
@@ -16,7 +15,6 @@ from packages.pipeline_services.job_tick_service import (
     JobTickService,
     PhaseExecutionError,
     TickAction,
-    TickSummary,
     _compute_transition,
     _transition_after_artifacts,
 )
@@ -180,7 +178,9 @@ class TestReviewAutoApprove:
     def test_auto_approve_with_approved_does_not_reapprove(self) -> None:
         """Already-approved reviews should advance, not re-auto-approve."""
         action = _compute_transition(
-            make_record(phase="script_review", review_status="approved", auto_approve=True),
+            make_record(
+                phase="script_review", review_status="approved", auto_approve=True
+            ),
             (),
         )
         # The "approved" check precedes the auto_approve check
@@ -191,7 +191,9 @@ class TestReviewAutoApprove:
     def test_auto_approve_with_pending_does_not_reapprove(self) -> None:
         """Already-pending reviews should wait, not auto-approve."""
         action = _compute_transition(
-            make_record(phase="script_review", review_status="pending", auto_approve=True),
+            make_record(
+                phase="script_review", review_status="pending", auto_approve=True
+            ),
             (),
         )
         assert action.run_handler is False
@@ -256,7 +258,8 @@ class TestHandlerExecution:
     @pytest.mark.parametrize(
         "phase",
         [
-            p for p in HANDLED_PHASES
+            p
+            for p in HANDLED_PHASES
             if p not in REVIEW_PHASES
             and p not in ("video_rendering", "subtitle_generating", "asset_retrieving")
         ],
@@ -328,7 +331,10 @@ class TestVideoRenderingNoArtifacts:
     def test_second_failure_marks_failed(self) -> None:
         """No artifacts + prior video_rendering error → mark as failed."""
         action = _transition_after_artifacts(
-            make_record(phase="video_rendering", last_error="video_rendering failed to produce artifacts"),
+            make_record(
+                phase="video_rendering",
+                last_error="video_rendering failed to produce artifacts",
+            ),
             (),
         )
         assert action.new_phase == "failed"
@@ -547,9 +553,7 @@ class TestAdvanceAfterReport:
         mock_repo.load_job.return_value = record
 
         svc = JobTickService(orchestrator=Mock(spec=PhaseOrchestrator), repo=mock_repo)
-        summary = svc.advance_after_report(
-            "proj-001", "test-job", []
-        )
+        summary = svc.advance_after_report("proj-001", "test-job", [])
         assert summary.action == "skipped"
 
     def test_merges_artifacts_from_manifest(self) -> None:

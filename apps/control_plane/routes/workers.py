@@ -58,10 +58,8 @@ def report_task(
                     )
 
                 tick_svc = JobTickService(orchestrator=orchestrator, repo=repo)
-                manifest_files = (
-                    (payload.artifact_manifest or {}).get("files", [])
-                )
-                summary = tick_svc.advance_after_report(
+                manifest_files = (payload.artifact_manifest or {}).get("files", [])
+                _ = tick_svc.advance_after_report(
                     project_id, job_id, list(manifest_files)
                 )
             except Exception:

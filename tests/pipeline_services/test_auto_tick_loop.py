@@ -42,9 +42,7 @@ def mock_projects(tmp_path: Path) -> Path:
     """Create a temporary workspace with one project and one job file."""
     jobs_dir = tmp_path / "workspace" / "projects" / "proj-001" / "control" / "jobs"
     jobs_dir.mkdir(parents=True)
-    (jobs_dir / "job-001.json").write_text(
-        _make_job_json("job-001"), encoding="utf-8"
-    )
+    (jobs_dir / "job-001.json").write_text(_make_job_json("job-001"), encoding="utf-8")
     return tmp_path
 
 
@@ -123,17 +121,14 @@ class TestAutoTickLoop:
                 raise PhaseExecutionError(
                     "job-001", "script_generating", "fail", RuntimeError("oops")
                 )
-            return TickSummary(
-                action="skipped", from_phase="queued", to_phase="queued"
-            )
+            return TickSummary(action="skipped", from_phase="queued", to_phase="queued")
 
         mock_svc = Mock(spec=JobTickService)
         mock_svc.tick.side_effect = _tick_side_effect
         mock_svc_cls.return_value = mock_svc
 
         jobs_dir = (
-            mock_projects
-            / "workspace" / "projects" / "proj-001" / "control" / "jobs"
+            mock_projects / "workspace" / "projects" / "proj-001" / "control" / "jobs"
         )
         (jobs_dir / "job-002.json").write_text(
             _make_job_json("job-002"), encoding="utf-8"
@@ -149,8 +144,7 @@ class TestAutoTickLoop:
     ) -> None:
         """Jobs without job_id should be skipped without calling tick()."""
         jobs_dir = (
-            mock_projects
-            / "workspace" / "projects" / "proj-001" / "control" / "jobs"
+            mock_projects / "workspace" / "projects" / "proj-001" / "control" / "jobs"
         )
         (jobs_dir / "no-id.json").write_text(
             json.dumps({"phase": "queued"}), encoding="utf-8"
@@ -177,17 +171,14 @@ class TestAutoTickLoop:
             call_count += 1
             if call_count == 1:
                 raise ValueError("unexpected error")
-            return TickSummary(
-                action="skipped", from_phase="queued", to_phase="queued"
-            )
+            return TickSummary(action="skipped", from_phase="queued", to_phase="queued")
 
         mock_svc = Mock(spec=JobTickService)
         mock_svc.tick.side_effect = _tick_side_effect
         mock_svc_cls.return_value = mock_svc
 
         jobs_dir = (
-            mock_projects
-            / "workspace" / "projects" / "proj-001" / "control" / "jobs"
+            mock_projects / "workspace" / "projects" / "proj-001" / "control" / "jobs"
         )
         (jobs_dir / "job-002.json").write_text(
             _make_job_json("job-002"), encoding="utf-8"

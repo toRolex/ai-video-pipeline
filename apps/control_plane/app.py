@@ -19,9 +19,11 @@ from apps.control_plane.routes.workers import router as workers_router
 from apps.control_plane.routes.tts import router as tts_router
 from apps.control_plane.routes.metrics import router as metrics_router
 from apps.control_plane.services.dispatch import Dispatcher
-from apps.control_plane.services.schedule_store import ScheduleStore
 from packages.file_store.repository import FileStoreRepository
-from packages.pipeline_services.job_tick_service import JobTickService, PhaseExecutionError
+from packages.pipeline_services.job_tick_service import (
+    JobTickService,
+    PhaseExecutionError,
+)
 from packages.pipeline_services.phase_orchestrator import create_orchestrator
 
 
@@ -62,9 +64,7 @@ async def _auto_tick(root_dir: Path):
                         )
                         options = {
                             "manual_script": data.get("manual_script", ""),
-                            "uploaded_audio_path": data.get(
-                                "uploaded_audio_path", ""
-                            ),
+                            "uploaded_audio_path": data.get("uploaded_audio_path", ""),
                             "language": data.get("language", "mandarin"),
                         }
 
