@@ -10,14 +10,17 @@ contained in a single referentially transparent function.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from packages.domain_core.models import ArtifactPointer, JobRecord
 from packages.domain_core.state import next_phase
 from packages.file_store.repository import FileStoreRepository
-from packages.pipeline_services.phase_orchestrator import PhaseContext, PhaseOrchestrator
+from packages.pipeline_services.phase_orchestrator import (
+    PhaseContext,
+    PhaseOrchestrator,
+)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -27,15 +30,17 @@ REVIEW_PHASES: frozenset[str] = frozenset(
     {"script_review", "tts_review", "asset_review", "final_review"}
 )
 
-HANDLED_PHASES: frozenset[str] = frozenset({
-    "script_generating",
-    "tts_generating",
-    "tts_review",
-    "subtitle_generating",
-    "asset_retrieving",
-    "video_rendering",
-    "final_review",
-})
+HANDLED_PHASES: frozenset[str] = frozenset(
+    {
+        "script_generating",
+        "tts_generating",
+        "tts_review",
+        "subtitle_generating",
+        "asset_retrieving",
+        "video_rendering",
+        "final_review",
+    }
+)
 
 _TERMINAL_PHASES: frozenset[str] = frozenset(
     {"completed", "failed", "cancelled", "paused"}
@@ -259,6 +264,7 @@ def _compute_transition(
         message=f"phase {phase} needs handler execution",
     )
 
+
 def _transition_after_artifacts(
     record: JobRecord,
     artifacts: tuple[Any, ...],
@@ -402,9 +408,7 @@ class JobTickService:
             try:
                 artifacts = self._orchestrator.run_phase(handler_phase, ctx)
             except Exception as e:
-                raise PhaseExecutionError(
-                    job_id, handler_phase, str(e), e
-                ) from e
+                raise PhaseExecutionError(job_id, handler_phase, str(e), e) from e
 
             # Merge new artifacts
             record.artifacts = _merge_artifacts(record.artifacts, artifacts)
@@ -434,7 +438,11 @@ class JobTickService:
         if update or action.run_handler:
             self._repo.save_job(project_id, record)
             if action.review_event:
-                event = {"job_id": job_id, "project_id": project_id, **action.review_event}
+                event = {
+                    "job_id": job_id,
+                    "project_id": project_id,
+                    **action.review_event,
+                }
                 self._repo.append_review_event(project_id, event)
 
         # 7. Build summary

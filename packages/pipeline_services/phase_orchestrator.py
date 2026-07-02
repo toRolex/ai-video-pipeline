@@ -586,7 +586,10 @@ class PhaseOrchestrator:
             )
 
         if final_path.exists():
-            print(f"[FINAL] {ctx.job_id}: final.mp4 produced ({final_path.stat().st_size} bytes)", flush=True)
+            print(
+                f"[FINAL] {ctx.job_id}: final.mp4 produced ({final_path.stat().st_size} bytes)",
+                flush=True,
+            )
             self._schedule_store.add(
                 job_id=ctx.job_id,
                 platform=platform,
