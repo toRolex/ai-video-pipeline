@@ -1,14 +1,26 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
   <head>
-    <meta charset="UTF-8" />
+    <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>内容运营数据追踪 — 滋元堂矩阵流水线</title>
-    <script type="module" crossorigin src="./assets/analytics-SWZ8Eu7M.js"></script>
-    <link rel="modulepreload" crossorigin href="./assets/index-CguyFcbT.js">
-    <link rel="stylesheet" crossorigin href="./assets/index-tOqf9Tvu.css">
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <title>Brandflow</title>
+    <script>"use strict";
+      (() => {
+        var t = localStorage.getItem("bf-theme");
+        if (t === "light" || t === "dark") {
+          document.documentElement.setAttribute("data-theme", t);
+        }
+        var l = localStorage.getItem("bf-layout");
+        if (l === "compact") {
+          document.documentElement.setAttribute("data-layout", l);
+        }
+      })();
+    </script>
+    <script type="module" crossorigin src="./assets/index-CoMBOjzA.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-Jd-aogJo.css">
   </head>
-  <body>
+  <body style="background: var(--bg-page); color: var(--text-primary); -webkit-font-smoothing: antialiased;">
     <div id="root"></div>
   </body>
 </html>

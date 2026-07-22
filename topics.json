@@ -1,62 +1,62 @@
 [
   {
     "keyword": "荔枝菌",
-    "total_plays": 1465675,
-    "video_count": 175,
-    "avg_completion": 26.16
-  },
-  {
-    "keyword": "广州美食",
-    "total_plays": 957599,
-    "video_count": 87,
-    "avg_completion": 26.89
-  },
-  {
-    "keyword": "松茸",
-    "total_plays": 804930,
-    "video_count": 3,
-    "avg_completion": 46.86
-  },
-  {
-    "keyword": "深圳美食",
-    "total_plays": 793367,
-    "video_count": 59,
-    "avg_completion": 27.98
-  },
-  {
-    "keyword": "一年一度松茸季来了",
-    "total_plays": 652064,
-    "video_count": 1,
-    "avg_completion": 70.72
-  },
-  {
-    "keyword": "一脚下去",
-    "total_plays": 652064,
-    "video_count": 1,
-    "avg_completion": 70.72
-  },
-  {
-    "keyword": "哭了",
-    "total_plays": 652064,
-    "video_count": 1,
-    "avg_completion": 70.72
-  },
-  {
-    "keyword": "美食推荐",
-    "total_plays": 474942,
-    "video_count": 27,
-    "avg_completion": 26.31
+    "total_plays": 583679,
+    "video_count": 197,
+    "avg_completion": 26.18
   },
   {
     "keyword": "夏至菇",
-    "total_plays": 304842,
-    "video_count": 12,
-    "avg_completion": 34.12
+    "total_plays": 140942,
+    "video_count": 9,
+    "avg_completion": 35.38
   },
   {
-    "keyword": "顺德美食",
-    "total_plays": 287648,
-    "video_count": 22,
-    "avg_completion": 26.78
+    "keyword": "广州美食",
+    "total_plays": 129605,
+    "video_count": 26,
+    "avg_completion": 27.28
+  },
+  {
+    "keyword": "岭南山鲜",
+    "total_plays": 114335,
+    "video_count": 16,
+    "avg_completion": 32.47
+  },
+  {
+    "keyword": "鸡枞菌",
+    "total_plays": 111345,
+    "video_count": 9,
+    "avg_completion": 33.45
+  },
+  {
+    "keyword": "广东美食",
+    "total_plays": 97469,
+    "video_count": 27,
+    "avg_completion": 25.93
+  },
+  {
+    "keyword": "菌子火锅",
+    "total_plays": 82561,
+    "video_count": 8,
+    "avg_completion": 29.74
+  },
+  {
+    "keyword": "深圳美食",
+    "total_plays": 56857,
+    "video_count": 5,
+    "avg_completion": 30.64
+  },
+  {
+    "keyword": "鸡枞",
+    "total_plays": 46795,
+    "video_count": 1,
+    "avg_completion": 43.47
+  },
+  {
+    "keyword": "老广抢的是那口鲜",
+    "total_plays": 46795,
+    "video_count": 1,
+    "avg_completion": 43.47
   }
 ]
